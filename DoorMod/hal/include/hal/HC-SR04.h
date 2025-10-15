@@ -1,0 +1,17 @@
+#ifndef HC_SR04_H
+#define HC_SR04_H
+#include <stdio.h> // fopen, fprintf, fclose, perror
+#include <stdlib.h>  // exit, EXIT_FAILURE, EXIT_SUCCESS
+#include <stdbool.h>
+#include <time.h>
+
+#define TRIG_PIN 27
+#define ECHO_PIN 17
+
+
+bool init_hc_sr04();
+
+long long get_distance();
+
+
+#endif // HC_SR04_H
