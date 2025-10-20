@@ -4,6 +4,8 @@
 #include <stdlib.h>  // exit, EXIT_FAILURE, EXIT_SUCCESS
 #include <stdbool.h>
 #include <time.h>
+#include <gpiod.h>
+
 
 
 bool export_pin(int pin);

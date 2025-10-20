@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <string.h> // strcmp
+#include <gpiod.h>
 #include "hal/GPIO.h"
 #include "hal/timing.h"
 
