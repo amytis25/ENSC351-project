@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define TRIG_PIN 27
-#define ECHO_PIN 17
+#define TRIG_PIN 17
+#define ECHO_PIN 27
 
 
 bool init_hc_sr04();
