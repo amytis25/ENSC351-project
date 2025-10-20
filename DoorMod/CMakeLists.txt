@@ -1,6 +1,6 @@
-# CMake Build Configuration for ENSC351 Assignment 1 - Reaction Timer
+# CMake Build Configuration for ENSC351 Assignment 1 - Door Mod
 cmake_minimum_required(VERSION 3.18)
-project(ENSC351_Assignment1 VERSION 1.0 DESCRIPTION "Reaction Timer Application" LANGUAGES C)
+project(ENSC351_Project VERSION 1.0 DESCRIPTION "Door Mod Application" LANGUAGES C)
 
 # Compiler options (inherited by sub-folders)
 set(CMAKE_C_STANDARD 11)
