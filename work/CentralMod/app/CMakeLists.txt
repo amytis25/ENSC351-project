@@ -17,7 +17,7 @@ target_link_libraries(centralMod LINK_PRIVATE rt m)
 add_custom_command(TARGET centralMod POST_BUILD
   COMMAND "${CMAKE_COMMAND}" -E copy
      "$<TARGET_FILE:centralMod>"
-     "~/ensc351Proj/public/app/centralMod"
+     "~/ensc351Proj/public/centralMod"
   COMMENT "Copying ARM executable to public NFS directory")
 
 
