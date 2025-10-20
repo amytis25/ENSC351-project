@@ -1,0 +1,7 @@
+*.exe   # Windows executables
+*.out   # Common for compiled C/C++ programs
+*.bin   # General binary files
+*.o     # Object files
+*.obj   # Object files for Windows
+*.json 
+build/
