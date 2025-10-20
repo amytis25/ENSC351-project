@@ -1,2 +1,0 @@
-/usr/bin/ar qc libhal.a CMakeFiles/hal.dir/src/GPIO.c.o "CMakeFiles/hal.dir/src/HC-SR04.c.o" CMakeFiles/hal.dir/src/timing.c.o
-/usr/bin/ranlib libhal.a

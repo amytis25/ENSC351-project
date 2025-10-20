@@ -1,1 +1,0 @@
-/usr/bin/cc -fsanitize=address -pthread -lrt CMakeFiles/doorMod.dir/doorMod.c.o -o doorMod  ../hal/libhal.a -lrt -lm 

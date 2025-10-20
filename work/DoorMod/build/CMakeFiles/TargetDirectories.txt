@@ -1,8 +1,0 @@
-/home/amytis/ensc351Proj/work/DoorMod/build/CMakeFiles/edit_cache.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/CMakeFiles/rebuild_cache.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/hal/CMakeFiles/hal.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/hal/CMakeFiles/edit_cache.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/hal/CMakeFiles/rebuild_cache.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/app/CMakeFiles/doorMod.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/app/CMakeFiles/edit_cache.dir
-/home/amytis/ensc351Proj/work/DoorMod/build/app/CMakeFiles/rebuild_cache.dir
