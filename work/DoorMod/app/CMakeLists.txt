@@ -17,7 +17,7 @@ target_link_libraries(doorMod LINK_PRIVATE rt m)
 add_custom_command(TARGET doorMod POST_BUILD
   COMMAND "${CMAKE_COMMAND}" -E copy
      "$<TARGET_FILE:doorMod>"
-     "~/ensc351Proj/public/app/doorMod"
+     "~/ensc351Proj/public/doorMod"
   COMMENT "Copying ARM executable to public NFS directory")
 
 
