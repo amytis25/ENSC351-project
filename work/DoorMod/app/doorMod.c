@@ -5,6 +5,7 @@
 #include "hal/HC-SR04.h"
 #include "hal/GPIO.h"
 #include "hal/timing.h"
+#include "hal/StepperMotor.h"
 
 void test_ultrasonic_sensor() {
     if (init_hc_sr04()){
