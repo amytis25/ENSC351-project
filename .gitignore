@@ -1,7 +1,36 @@
+# Build artifacts
 *.exe   # Windows executables
 *.out   # Common for compiled C/C++ programs
 *.bin   # General binary files
 *.o     # Object files
 *.obj   # Object files for Windows
-*.json 
+*.a     # Static libraries
+*.so    # Shared libraries
+*.dll   # Windows shared libraries
+
+# Build directories
 build/
+**/build/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/Makefile
+**/install_manifest.txt
+**/compile_commands.json
+
+# Specific CMake generated files
+*.dir/
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.suo
+*.user
+*.filters
+
+# Project-specific build artifacts
+**/doorMod
+**/libhal.a
+**/*.d       # Dependency files
+**/*.c.o.d   # CMake dependency files
+**/compiler_depend.make
+**/compiler_depend.ts
