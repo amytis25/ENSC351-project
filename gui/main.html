@@ -17,32 +17,40 @@
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
-                <tr>
-                    <td>Door 1</td>
-                    <td><span id="door1_status">Closed</span></td>
-                    <td><button type="button" id="toggle_door1" onclick="toggleDoor(1)">Lock Door</button></td>
-                </tr>
+                <div id="door1">
+                    <tr>
+                        <td>Door 1</td>
+                        <td><span id="door1_status">Closed</span></td>
+                        <td><button type="button" id="toggle_door1" onclick="toggleDoor(1)">Lock Door</button></td>
+                    </tr>
                 <tr id="door1_message"></tr>
-                <tr>
-                    <td>Door 2</td>
-                    <td><span id="door2_status">Closed</span></td>
-                    <td><button type="button" id="toggle_door2" onclick="toggleDoor(2)">Lock Door</button></td>
-                </tr>
-                <tr id="door2_message"></tr>
-                <tr>
-                    <td>Door 3</td>
-                    <td><span id="door3_status">Closed</span></td>
-                    <td><button type="button" id="toggle_door3" onclick="toggleDoor(3)">Lock Door</button></td>
-                </tr>
-                <tr id="door3_message"></tr>
-                <tr>
-                    <td>Door 4</td>
-                    <td><span id="door4_status">Closed</span></td>
-                    <td><button type="button" id="toggle_door4" onclick="toggleDoor(4)">Lock Door</button></td>
-                </tr>
-                <tr id="door4_message"></tr>
+                </div>
+                <div id="door2"> 
+                    <tr>
+                        <td>Door 2</td>
+                        <td><span id="door2_status">Closed</span></td>
+                        <td><button type="button" id="toggle_door2" onclick="toggleDoor(2)">Lock Door</button></td>
+                    </tr>
+                    <tr id="door2_message"></tr>
+                </div>
+                <div id="door3">
+                    <tr>
+                        <td>Door 3</td>
+                        <td><span id="door3_status">Closed</span></td>
+                        <td><button type="button" id="toggle_door3" onclick="toggleDoor(3)">Lock Door</button></td>
+                    </tr>
+                    <tr id="door3_message"></tr>
+                </div>
+                <div id="door4">
+                    <tr>
+                        <td>Door 4</td>
+                        <td><span id="door4_status">Closed</span></td>
+                        <td><button type="button" id="toggle_door4" onclick="toggleDoor(4)">Lock Door</button></td>
+                    </tr>
+                    <tr id="door4_message"></tr>
+                </div>
             </table>
-        
+        </div>
     </div>
 </body>
 </html>

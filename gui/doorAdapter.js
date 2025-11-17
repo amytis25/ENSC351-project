@@ -6,13 +6,16 @@ const DoorState = {
     LOCKED: 'LOCKED',
     UNLOCKED: 'UNLOCKED',
     OPEN: 'OPEN',
-    UNKNOWN: 'UNKNOWN'
+    UNKNOWN: 'UNKNOWN',
+    DISCONNECTED: 'DISCONNECTED'
 };
 
 // Internal simulated doors (id starts at 1)
 const doors = [
-    { id: 1, state: DoorState.UNLOCKED, distance: 0, position: 0 },
-    { id: 2, state: DoorState.UNLOCKED, distance: 0, position: 0 }
+    { id: 1, state: DoorState.UNLOCKED, dispState: DoorState.UNLOCKED},
+    { id: 2, state: DoorState.UNLOCKED, dispState: DoorState.UNLOCKED},
+    { id: 3, state: DoorState.UNLOCKED, dispState: DoorState.UNLOCKED},
+    { id: 4, state: DoorState.DISCONNECTED, dispState: DoorState.DISCONNECTED}
 ];
 
 export function initializeDoorSystem() {

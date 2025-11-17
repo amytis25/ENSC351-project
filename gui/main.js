@@ -5,10 +5,15 @@ async function refreshStatus() {
         const state = await doorAdapter.getDoorStatus(id);
         const span = document.getElementById(`door${id}_status`);
         const btn = document.getElementById(`toggle_door${id}`);
+        const div = document.getElementById(`door${id}`);
         // display as human-friendly lowercase
         span.textContent = state.toLowerCase();
-
-        if (state === 'LOCKED') {
+        if (state === 'DISCONNECTED') {
+            div.style.display = 'block';
+            div.style.display = 'none';
+            btn.disabled = true;
+        }
+        else if (state === 'LOCKED') {
             span.textContent = 'locked';
             btn.textContent = 'Unlock Door';
             btn.disabled = false;
