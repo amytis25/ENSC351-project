@@ -121,7 +121,7 @@ long long get_distance(){
         if((getTimeInUs() - t_start) > timeout_us) {
             DEBUG_VERBOSE("Timeout waiting for echo pin to go low (pin value = %d, reads = %d)\n", v, read_count);
             printf("Timeout waiting for echo pin to go low\n");
-            return -1;
+            return 10000;
         }
         sleepForUs(50); /* Poll every 50us */
     }

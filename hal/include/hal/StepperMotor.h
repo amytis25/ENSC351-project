@@ -28,7 +28,7 @@ static const int fullstep_sequence[4][4] = {
     {0, 0, 1, 1}   // Step 4: energize coils C and D
 };
 // zero pattern to turn off all coils
-const int zero_pattern[4] = {0, 0, 0, 0};
+static const int zero_pattern[4] = {0, 0, 0, 0};
 
 #define STEPS_PER_DEGREE (4096 / 360)
 // IN1 GPIO 04, IN2 GPIO 22, IN3 GPIO 5, IN4 GPIO 6
