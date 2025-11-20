@@ -82,6 +82,7 @@ Use one of these minimal options (do this from the repo root). Remove the old `b
         cmake --build build
         ```
 ## WLAN SETUP
+source: https://docs.beagleboard.org/boards/beagley/ai/02-quick-start.html <br><br>
 Once board is fully booted and you have access to the shell, follow the commands below to connect to any WiFi access point, <br>
 
 - To list the wireless devices attached, (you should see wlan0 listed) <br>
