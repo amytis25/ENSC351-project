@@ -83,7 +83,7 @@ Use one of these minimal options (do this from the repo root). Remove the old `b
         ```
 ## WLAN SETUP
 
-### SETUP GUIDE
+### SETUP
 source: https://docs.beagleboard.org/boards/beagley/ai/02-quick-start.html <br><br>
 Once board is fully booted and you have access to the shell, follow the commands below to connect to any WiFi access point, <br>
 
@@ -102,8 +102,9 @@ Once board is fully booted and you have access to the shell, follow the commands
 - Test connection with ping command, <br>
 `ping 8.8.8.8`<br>
 
-### WIFI information
-The wifi for this project is called 351network. PW defender351
+### WLAN information
+The LAN for this project is called 351network. PW defender351
+Host connected to LAN via ethernet. wlan0 is connected to SFUNET-SECURE
 
 iwctl --passphrase "defender351" station wlan0 connect "351network"
 
