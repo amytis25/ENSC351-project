@@ -108,6 +108,9 @@ Host connected to LAN via ethernet. wlan0 is connected to SFUNET-SECURE
 
 iwctl --passphrase "defender351" station wlan0 connect "351network"
 
+to disconnect:
+iwctl station wlan0 disconnect
+
 ## NETCAT INFORMATION
 Created two ports for UDP function:
 
