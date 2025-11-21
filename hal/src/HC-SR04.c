@@ -9,8 +9,8 @@
 #include "hal/timing.h"
 
 /* Debug output control - set to 0 to disable debug printfs */
-#define HC_SR04_DEBUG 1
-#define HC_SR04_DEBUG_VERBOSE 0  /* Set to 1 for detailed per-read debug messages */
+//#define HC_SR04_DEBUG 1
+//#define HC_SR04_DEBUG_VERBOSE 0  /* Set to 1 for detailed per-read debug messages */
 
 #if HC_SR04_DEBUG
     #define DEBUG_PRINT(...) printf(__VA_ARGS__)

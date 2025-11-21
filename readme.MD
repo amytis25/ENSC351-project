@@ -25,10 +25,10 @@ The central BeagleY-AI board will send updates to the user. <br>
 ## BEAGLE-Y-AI PIN CONNECTIONS 
 
 - **STEPPER MOTOR**
-    - IN1: 
-    - IN2:
-    - IN3:
-    - IN4:
+    - IN1: GPIO 04
+    - IN2: GPIO 22
+    - IN3: GPIO 05
+    - IN4: GPIO 06
 
 - **ULTRASONIC SENSOR (HC-SR04)**:
     - trig: GPIO27 (gpiochip1, line 33)
@@ -81,7 +81,24 @@ Use one of these minimal options (do this from the repo root). Remove the old `b
         CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake -S . -B build
         cmake --build build
         ```
+## WLAN SETUP
+source: https://docs.beagleboard.org/boards/beagley/ai/02-quick-start.html <br><br>
+Once board is fully booted and you have access to the shell, follow the commands below to connect to any WiFi access point, <br>
 
+- To list the wireless devices attached, (you should see wlan0 listed) <br>
+`iwctl device list` <br><br>
+- Scan WiFi using,<br>
+`iwctl station wlan0 scan`<br><br>
+- Get networks using, <br>
+`iwctl station wlan0 get-networks` <br><br>
+- Connect to your wifi network using,<br>
+`iwctl --passphrase "<wifi-pass>" station wlan0 connect "<wifi-name>"` <br><br>
+- Check wlan0 status with, <br>
+`iwctl station wlan0 show` <br><br>
+- To list the networks with connected WiFi marked you can again use, <br>
+`iwctl station wlan0 get-networks` <br><br>
+- Test connection with ping command, <br>
+`ping 8.8.8.8`<br>
 ## NETCAT INFORMATION
 Created two ports for UDP function:
 

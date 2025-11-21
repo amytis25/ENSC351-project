@@ -8,8 +8,8 @@
 #include "hal/GPIO.h"
 
 /* Debug output control - set to 0 to disable debug printfs */
-#define GPIO_DEBUG 1
-#define GPIO_DEBUG_VERBOSE 0  /* Set to 1 for detailed per-read debug messages */
+//#define GPIO_DEBUG 1
+//#define GPIO_DEBUG_VERBOSE 0  /* Set to 1 for detailed per-read debug messages */
 
 #if GPIO_DEBUG
     #define DEBUG_PRINT(...) printf(__VA_ARGS__)

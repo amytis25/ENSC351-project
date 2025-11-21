@@ -28,9 +28,9 @@ static const int fullstep_sequence[4][4] = {
     {0, 0, 1, 1}   // Step 4: energize coils C and D
 };
 // zero pattern to turn off all coils
-const int zero_pattern[4] = {0, 0, 0, 0};
+static const int zero_pattern[4] = {0, 0, 0, 0};
 
-#define STEPS_PER_DEGREE (4096 / 360)
+#define STEPS_PER_REV 4096 /* total half-steps per revolution for the stepper */
 // IN1 GPIO 04, IN2 GPIO 22, IN3 GPIO 5, IN4 GPIO 6
 #define IN1_GPIOCHIP 1  /* GPIO chip number for IN1 pin */
 #define IN1_GPIO_LINE 38 /* GPIO38 - from gpioinfo: gpiochip1 38 "GPIO38" */

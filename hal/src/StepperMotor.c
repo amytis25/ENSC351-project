@@ -2,8 +2,10 @@
 
 // #define DEBUG_STEP_MOTOR
 
-// Global position tracking (in degrees)
-static int current_position = 0;
+// Global position tracking stored in motor steps (0 .. STEPS_PER_REV-1).
+// Storing steps avoids repeated integer-division rounding when converting
+// between steps and degrees.
+static int current_step_position = 0;
 
 // Function to set a single step pattern
 static bool set_motor_pins(const int* pattern) {
@@ -27,7 +29,7 @@ bool StepperMotor_Init(void) {
     }
 
     // Set initial position to 0
-    current_position = 0;
+    current_step_position = 0;
     
     // Set all pins low initially
     if (!set_motor_pins(zero_pattern)) {
@@ -45,15 +47,16 @@ bool StepperMotor_Rotate(int target_degrees) {
         return false;
     }
 
-    // Calculate steps needed
-    int total_steps = target_degrees * STEPS_PER_DEGREE;
+    // Calculate the exact number of motor steps we need to move.
+    // Use rounding to avoid cumulative truncation: steps = round(deg * STEPS_PER_REV / 360)
+    int total_steps = (int)((target_degrees * (long)STEPS_PER_REV + 180) / 360);
     int current_step = 0;
     int sequence_index = 0;
-    
-    printf("Rotating motor to %d degrees (%d steps)...\n", 
-           target_degrees, total_steps);
-    
-    // Perform rotation
+
+    printf("Rotating motor to %d degrees...\n", 
+        target_degrees);
+
+    // Perform rotation forward by total_steps
     while (current_step < total_steps) {
         // Set the current step pattern
         if (!set_motor_pins(halfstep_sequence[sequence_index])) {
@@ -65,21 +68,27 @@ bool StepperMotor_Rotate(int target_degrees) {
         sequence_index = (sequence_index + 1) % 8;
         current_step++;
 
-        // Update position tracking (normalize to 0-360)
-        current_position = (current_position + (360 / (STEPS_PER_DEGREE * 8))) % 360;
+
+    // Update position in steps. We add one motor step per iteration.
+    current_step_position = (current_step_position + 1) % STEPS_PER_REV;
 
         // Small delay between steps (adjust for speed)
         sleepForMs(2);
     }
 
-    // Hold final position
-    printf("Rotation complete. Current position: %d degrees\n", 
-           current_position);
+    // Hold final position — print converted degrees (not raw steps)
+    {
+        int deg = (int)((current_step_position * 360L) / STEPS_PER_REV);
+        printf("Rotation complete. Current position: %d degrees\n", deg);
+    }
     return true;
 }
 
 int StepperMotor_GetPosition(void) {
-    return current_position;
+    /* Convert current step position to degrees (integer degrees). Use
+     * integer math: degrees = floor(current_step_position * 360 / STEPS_PER_REV)
+     */
+    return (int)((current_step_position * 360L) / STEPS_PER_REV);
 }
 
 bool StepperMotor_ResetPosition(void) {
@@ -87,6 +96,6 @@ bool StepperMotor_ResetPosition(void) {
     if (!set_motor_pins(zero_pattern)) {
         return false;
     }
-    current_position = 0;
+    current_step_position = 0;
     return true;
 }

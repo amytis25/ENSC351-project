@@ -17,17 +17,41 @@ bool initializeDoorSystem (){
         }
     return true;
 }
+long long  avgDistanceSample (){
+    long long totalDistance = 0;
+    int sample_count = 0;
+    long long start_sampling_time = getTimeInMs();
+    while ((getTimeInMs() - start_sampling_time) < 100){
+        long long distance = get_distance();
+        if (distance != -1){
+            totalDistance += distance;
+            sample_count++;
+        }
+        sleepForMs(5); // Small delay between samples
+    }
+    if (sample_count == 0){
+        return -1; // Indicate error if no valid samples
+    }
+
+    return totalDistance / sample_count;
+}
+
 
 // Lock the door
 Door_t lockDoor (Door_t *door){
+    long long dist = avgDistanceSample();
     if (StepperMotor_GetPosition()== 180){
         printf("Door is already locked.\n");
     } else {
-        if (get_distance() >= 5) {
+        if (dist >= 10) {
             printf("Door is open, cannot lock.\n");
             door->state = OPEN;
         }
-        else if (get_distance() < 5) {
+        else if (dist == -1) {
+            printf("Ultrasonic sensor error, cannot lock door.\n");
+            door->state = UNKNOWN;
+        }
+        else if (dist < 10) {
             if (StepperMotor_Rotate(180)){
                 printf("Door locked successfully.\n");
                 // Update door state
@@ -64,24 +88,29 @@ Door_t unlockDoor (Door_t *door){
 
 // Get the current status of the door
 Door_t get_door_status (Door_t *door){
-    int distance = get_distance();
-    if (distance == -1) {
+    long long distance = get_distance();
+    if (StepperMotor_GetPosition()== 180){
+        door->state = LOCKED;
+        printf("Door is LOCKED.\n");
+    } 
+    else if (distance < 10 && distance != -1) {
+        door->state = UNLOCKED;
+        printf("Door is CLOSED and UNLOCKED.\n");
+    }
+    else if (distance == -1) {
         printf("Error reading distance from ultrasonic sensor.\n");
         return *door;
     }
 
-    if (distance >= 5) {
+    else if (distance >= 10) {
         door->state = OPEN;
-    } else {
-        int position = StepperMotor_GetPosition();
-        if (position == 0) {
-            door->state = UNLOCKED;
-        } else if (position == 180) {
-            door->state = LOCKED;
-        } else {
-            door->state = UNKNOWN; // Assuming any other position means closed but not locked
-        }
+        printf("Door is OPEN.\n");
+    } 
+    else {        
+        door->state = UNKNOWN; // Assuming any other position means closed but not locked
+        printf("Door is in an UNKNOWN state.\n");
     }
+    
 
     return *door;
 

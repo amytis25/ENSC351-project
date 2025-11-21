@@ -8,7 +8,6 @@
 #include "hal/StepperMotor.h"
 
 typedef enum {
-    CLOSED,
     LOCKED,
     UNLOCKED,
     OPEN,
