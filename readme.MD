@@ -104,23 +104,45 @@ Once board is fully booted and you have access to the shell, follow the commands
 
 ### WLAN information
 The LAN for this project is called 351network. PW defender351
-Host connected to LAN via ethernet. wlan0 is connected to SFUNET-SECURE
+Hub connected to LAN via ethernet. wlan0 of hub is connected to SFUNET-SECURE for discord message functionality
 
 iwctl --passphrase "defender351" station wlan0 connect "351network"
 
 to disconnect:
 iwctl station wlan0 disconnect
 
-## NETCAT INFORMATION
-Created two ports for UDP function:
-
- - Used port 12345 for "1.2 Listening to UDP" functions
- - Used port 12346 to complete "1.4 Terminal Output" Secion in Assignment Instructions and print to host.
-    - BYAI terminal outputs as per "1.6 Local output" instruction
-    - BYAI terminal and Host terminal print information simutaneosly
- - Can use both ports 12345 and 12346 in different terminal windows.
+## UDP/NETCAT INFORMATION
+UDP ports used:
+ - Used port 12345 on mods for hub command recieving
+ - Used port 12345 on hub for command feedback from mods
+ - Used port 12346 on hub for poll recieving 
 
 NETCAT COMMANDS
-netcat -u 192.168.7.2 12345 
-nc -u -l -p 12346
+netcat -u 192.168.8.108 12345 command feedback 
+netcat -u 192.168.8.108 12346 or netcat -u -l -p 12346 polling to hub
 
+netcat -u 192.168.8.213 12345 commands for D1
+netcat -u 192.168.8.238 12345 commands for D2
+netcat -u 192.168.9.0 12345 commands for D3
+netcat -u -l -p 12345 global commands/feedback
+
+## FRESH COMPILE
+CMAKE should make 2 executables:
+- door_system
+- doorMod
+
+door_system belongs on hub
+doorMod runs on the doors
+
+### Loading the Executables
+Connect to HUB wifi network
+
+Compile door_system, doorMod
+
+run commands from executable folder (when all connected):
+scp door_system melissa@192.168.8.108:/home/
+scp doorMod amytis@192.168.8.213:/home/
+scp doorMod <SIMON_USER>@192.168.8.238:/home/
+scp doorMod <RICHARD_USER>@192.168.0.000:/home/
+
+Then SSH into each and run. or add to profile to auto run at startup
