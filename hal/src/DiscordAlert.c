@@ -5,13 +5,19 @@
 #include <stdatomic.h>
 
 #include "hal/DiscordAlert.h"
+#include "hal/timing.h"
 #include "doorMod.h"
-#include "timing.h"
 
 // Discord Alert sending handling using libcurl
-static const char* webhook_URL = "https://discord.com/api/webhooks/1438726790259540070/fZlHT6fpXPuG-DSau6iggXdJoXXSUf1pFYwnEZrkkCh25yyAGM5BCRynv1HC05g16n5f";
-bool discordStart(const char *webhook_url){
+static const char* webhook_URL = "https://discord.com/api/webhooks/1444219627461673080/rrr5SoaN1RpNC_PGoIH_mFWFV8fB4PosUd6qGC24M3zfg6nsDnvXAhyTxtr5qDiZOJy2";
+bool discordStart(void){
+    const char* webhook = webhook_URL;
     curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (!webhook) {
+        fprintf(stderr, "discordStart: webhook_url is NULL\n");
+        return false;
+    }
+    return true;
 }
 
 void discordCleanup(void){
@@ -61,7 +67,6 @@ static const char *door_state_to_str(DoorState_t s)
     case OPEN:     return "OPEN";
     case LOCKED:   return "LOCKED";
     case UNLOCKED: return "UNLOCKED";
-    case CLOSED:   return "CLOSED";
     default:       return "UNKNOWN";
     }
 }

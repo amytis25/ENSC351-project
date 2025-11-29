@@ -5,12 +5,20 @@
 # Find all source files in the src directory. Provide an option to include
 # Discord webhook support (DiscordAlert.c) so it can be disabled on systems
 # that shouldn't build networking code.
-option(WITH_DISCORD "Enable Discord webhook alert support" OFF)
 option (WITH_TCP "Enable TCP networking support" OFF)
+option (WITH_DISCORD "Enable Discord webhook support" OFF)
 
 include_directories(hal/include)
+include_directories(app/include)
+
 file(GLOB MY_SOURCES "src/*.c")
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/DiscordAlert.c")
+    set(WITH_DISCORD ON CACHE BOOL "Enable Discord webhook support" FORCE)
+endif()
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/door_tcp_client.c")
+	set(WITH_TCP ON CACHE BOOL "Enable TCP networking support" FORCE)
+endif()
 if(NOT WITH_DISCORD)
 	# Remove DiscordAlert.c from the source list if user disabled it.
 	list(FILTER MY_SOURCES EXCLUDE REGEX ".*/DiscordAlert.c$")
@@ -31,11 +39,14 @@ ENDIF(CURL_FOUND)
 add_library(hal STATIC ${MY_SOURCES})
 
 # Make the include directory available to users of this library
-target_include_directories(hal PUBLIC include)
+target_include_directories(hal PUBLIC 
+	${CMAKE_SOURCE_DIR}/hal/include
+	${CMAKE_SOURCE_DIR}/app/include	
+)
+
 
 # Link required libraries for LED control and timing
 target_link_libraries(hal PUBLIC rt)  # For nanosleep and real-time functions
-
 if(WITH_DISCORD)
 	message(STATUS "HAL: Building with DiscordAlert support")
 else()

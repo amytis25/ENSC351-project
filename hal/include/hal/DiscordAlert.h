@@ -7,7 +7,7 @@
 #include <curl/curl.h>
 
 
-bool discordStart(const char *webhook_url);
+bool discordStart(void);
 void discordCleanup(void);
 void sendDiscordAlert(const char *webhookURL, const char *msg);
 

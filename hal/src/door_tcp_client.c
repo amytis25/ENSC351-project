@@ -1,6 +1,6 @@
 // door_tcp_client.c
 #define _POSIX_C_SOURCE 200809L
-#include "door_tcp_client.h"
+#include "hal/door_tcp_client.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
