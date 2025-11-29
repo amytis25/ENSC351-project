@@ -39,3 +39,4 @@ build/
 app/CMakeLists.txt
 ! gui/*
 .github/copilot-instructions.md
+todos - network - melissa
