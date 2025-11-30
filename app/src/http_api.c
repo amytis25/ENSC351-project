@@ -82,10 +82,15 @@ static void handle_client(int client)
         HubDoorStatus st;
         if (hub_udp_get_status(mod, &st)) {
             char out[512];
-            snprintf(out, sizeof(out), "{\"module\":\"%s\",\"d0_open\":%s,\"d0_locked\":%s,\"lastHB\":%lld}",
+            // Include friendly field names for UI: front_door_open and front_lock_locked
+            snprintf(out, sizeof(out), "{\"module\":\"%s\",\"d0_open\":%s,\"d0_locked\":%s,\"d1_open\":%s,\"d1_locked\":%s,\"front_door_open\":%s,\"front_lock_locked\":%s,\"lastHB\":%lld}",
                      st.module_id,
                      st.d0_open ? "true" : "false",
                      st.d0_locked ? "true" : "false",
+                     st.d1_open ? "true" : "false",
+                     st.d1_locked ? "true" : "false",
+                     st.d0_open ? "true" : "false",
+                     st.d1_locked ? "true" : "false",
                      st.last_heartbeat_ms);
             send_response(client, out);
             free(mod);
@@ -97,8 +102,12 @@ static void handle_client(int client)
         if (strcmp(mod, g_module_id) == 0) {
             Door_t d = { .state = UNKNOWN };
             d = get_door_status(&d);
+            // Map Door_t state to friendly booleans for front door and lock
+            const char *front_open = (d.state == OPEN) ? "true" : "false";
+            const char *front_locked = (d.state == LOCKED) ? "true" : "false";
             char out[256];
-            snprintf(out, sizeof(out), "{\"module\":\"%s\",\"state\":%d}", mod, d.state);
+            snprintf(out, sizeof(out), "{\"module\":\"%s\",\"state\":%d,\"front_door_open\":%s,\"front_lock_locked\":%s}",
+                     mod, d.state, front_open, front_locked);
             send_response(client, out);
             free(mod);
             close(client);

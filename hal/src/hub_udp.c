@@ -14,6 +14,7 @@
 #include <hal/DiscordAlert.h>
 
 static int          g_sock        = -1;
+static int          g_sock2       = -1;
 static pthread_t    g_thread_id;
 static int          g_listen_port = 0;
 static volatile int g_stopping    = 0;
@@ -217,7 +218,30 @@ static void *udp_thread(void *arg)
     char buf[HUB_LINE_LEN];
 
     while (!g_stopping) {
-        ssize_t n = recvfrom(g_sock, buf, sizeof(buf) - 1, 0,
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        int maxfd = -1;
+        if (g_sock >= 0) { FD_SET(g_sock, &rfds); maxfd = g_sock; }
+        if (g_sock2 >= 0) { FD_SET(g_sock2, &rfds); if (g_sock2 > maxfd) maxfd = g_sock2; }
+
+        struct timeval tv;
+        tv.tv_sec = 0; tv.tv_usec = 500000; // 500 ms
+        int r = select(maxfd + 1, &rfds, NULL, NULL, &tv);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            perror("hub_udp: select");
+            usleep(1000);
+            continue;
+        } else if (r == 0) {
+            continue; // timeout
+        }
+
+        int fd = -1;
+        if (g_sock >= 0 && FD_ISSET(g_sock, &rfds)) fd = g_sock;
+        else if (g_sock2 >= 0 && FD_ISSET(g_sock2, &rfds)) fd = g_sock2;
+        if (fd < 0) continue;
+
+        ssize_t n = recvfrom(fd, buf, sizeof(buf) - 1, 0,
                              (struct sockaddr *)&src, &src_len);
         if (n < 0) {
             if (errno == EINTR) continue;
@@ -236,34 +260,58 @@ static void *udp_thread(void *arg)
 
 // ---------- public API ----------
 
-bool hub_udp_init(uint16_t listen_port)
+bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2)
 {
-    if (g_sock >= 0) {
+    if (g_sock >= 0 || g_sock2 >= 0) {
         fprintf(stderr, "hub_udp_init: already initialized\n");
         return false;
     }
 
-    g_listen_port = listen_port;
+    g_listen_port = listen_port1;
 
-    int s = socket(AF_INET, SOCK_DGRAM, 0);
-    if (s < 0) {
+    int s1 = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s1 < 0) {
         perror("hub_udp: socket");
         return false;
     }
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family      = AF_INET;
-    addr.sin_port        = htons(listen_port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct sockaddr_in addr1;
+    memset(&addr1, 0, sizeof(addr1));
+    addr1.sin_family      = AF_INET;
+    addr1.sin_port        = htons(listen_port1);
+    addr1.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        perror("hub_udp: bind");
-        close(s);
+    if (bind(s1, (struct sockaddr *)&addr1, sizeof(addr1)) < 0) {
+        perror("hub_udp: bind port1");
+        close(s1);
         return false;
     }
 
-    g_sock = s;
+    g_sock = s1;
+
+    if (listen_port2 != 0) {
+        int s2 = socket(AF_INET, SOCK_DGRAM, 0);
+        if (s2 < 0) {
+            perror("hub_udp: socket2");
+            close(g_sock);
+            g_sock = -1;
+            return false;
+        }
+        struct sockaddr_in addr2;
+        memset(&addr2, 0, sizeof(addr2));
+        addr2.sin_family      = AF_INET;
+        addr2.sin_port        = htons(listen_port2);
+        addr2.sin_addr.s_addr = htonl(INADDR_ANY);
+        if (bind(s2, (struct sockaddr *)&addr2, sizeof(addr2)) < 0) {
+            perror("hub_udp: bind port2");
+            close(s2);
+            close(g_sock);
+            g_sock = -1;
+            return false;
+        }
+        g_sock2 = s2;
+    }
+
     g_stopping = 0;
 
     // Clear state
@@ -276,8 +324,9 @@ bool hub_udp_init(uint16_t listen_port)
 
     if (pthread_create(&g_thread_id, NULL, udp_thread, NULL) != 0) {
         perror("hub_udp: pthread_create");
-        close(g_sock);
-        g_sock = -1;
+        if (g_sock2 >= 0) close(g_sock2);
+        if (g_sock >= 0) close(g_sock);
+        g_sock = -1; g_sock2 = -1;
         return false;
     }
 
@@ -292,8 +341,8 @@ void hub_udp_shutdown(void)
     // poke the socket by sending a dummy packet to ourselves (optional)
 
     pthread_join(g_thread_id, NULL);
-    close(g_sock);
-    g_sock = -1;
+    if (g_sock >= 0) { close(g_sock); g_sock = -1; }
+    if (g_sock2 >= 0) { close(g_sock2); g_sock2 = -1; }
 }
 
 bool hub_udp_get_status(const char *module_id, HubDoorStatus *out)

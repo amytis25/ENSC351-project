@@ -51,6 +51,23 @@ export async function getDoorStatus(moduleId) {
     }
 }
 
+export async function getDoorInfo(moduleId) {
+    const mod = formatModuleId(moduleId);
+    try {
+        const res = await fetch(`/api/status?module=${encodeURIComponent(mod)}`);
+        if (!res.ok) return null;
+        const j = await res.json();
+        return {
+            state: normalizeStatusJson(j),
+            raw: j,
+            frontDoorOpen: !!j.front_door_open || !!j.d0_open,
+            frontLockLocked: !!j.front_lock_locked || !!j.d1_locked
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
 async function sendCommand(moduleId, target, action) {
     const mod = formatModuleId(moduleId);
     const body = `module=${encodeURIComponent(mod)}&target=${encodeURIComponent(target||'')}&action=${encodeURIComponent(action)}`;

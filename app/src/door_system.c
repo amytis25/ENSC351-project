@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "http_api.h"
+#include "discord_alert.h"
 
 typedef struct {
     Door_t* door[4];
@@ -30,8 +31,8 @@ int main(int argc, char *argv[]){
         LED_set_green_steady(true, 30);
     }
 
-    // Start door UDP client reporting (heartbeat + notifications)
-    if (!door_udp_init(hub_ip, 12345, module_id,
+    // Start door UDP client reporting (notifications -> 12345, heartbeats -> 12346)
+    if (!door_udp_init2(hub_ip, 12345, 12346, module_id,
                        DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT,
                        1000)) {
         fprintf(stderr, "WARNING: door_udp_init failed, running without door reporting.\n");
@@ -42,11 +43,46 @@ int main(int argc, char *argv[]){
         // Start webhook reporter if provided via argv[3] or environment
         const char *webhook_url = (argc > 3) ? argv[3] : getenv("HUB_WEBHOOK_URL");
         bool webhook_running = false;
+        char *discord_provider_ctx = NULL;
+        bool discord_monitor_running = false;
         if (webhook_url) {
             if (!hub_webhook_init(webhook_url)) {
                 fprintf(stderr, "WARNING: webhook init failed, continuing without webhook.\n");
             } else {
                 webhook_running = true;
+            }
+        }
+
+        // Start Discord alert monitor (application-owned provider).
+        // The provider will be a function that queries the hub-aggregated status
+        // via `hub_udp_get_status()` and returns a freshly-allocated message string.
+        static char *door_alert_provider(void *ctx) {
+            const char *module = (const char *)ctx;
+            if (!module) return NULL;
+            HubDoorStatus st;
+            if (hub_udp_get_status(module, &st)) {
+                char buf[512];
+                snprintf(buf, sizeof(buf), "%s: D0=%s,%s lastHB=%lldms",
+                         st.module_id,
+                         st.d0_open   ? "OPEN" : "CLOSED",
+                         st.d0_locked ? "LOCKED" : "UNLOCKED",
+                         st.last_heartbeat_ms);
+                return strdup(buf);
+            }
+            return NULL;
+        }
+
+        if (webhook_url) {
+            if (discordStart()) {
+                discord_provider_ctx = strdup(module_id);
+                if (discord_provider_ctx) {
+                    if (!startDoorAlertMonitor(door_alert_provider, discord_provider_ctx, webhook_url)) {
+                        free(discord_provider_ctx);
+                        discord_provider_ctx = NULL;
+                    } else {
+                        discord_monitor_running = true;
+                    }
+                }
             }
         }
 
@@ -58,12 +94,12 @@ int main(int argc, char *argv[]){
         }
 
     // ----------------------- UDP Communication Setup -----------------------
-        if (!hub_udp_init(12345)) {
-        fprintf(stderr, "Failed to start hub UDP listener\n");
+        if (!hub_udp_init2(12345, 12346)) {
+        fprintf(stderr, "Failed to start hub UDP listener(s)\n");
         return 1;
     }
 
-    printf("Hub listening on UDP port 12345...\n");
+    printf("Hub listening on UDP ports 12345 (commands/alerts) and 12346 (heartbeats)...\n");
     // -------------------------EG door control loop ------------------------
 
        // Example: simple CLI loop where user can ask for status.

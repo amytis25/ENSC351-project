@@ -116,37 +116,59 @@ to disconnect:
 iwctl station wlan0 disconnect
 
 ## UDP/NETCAT INFORMATION
-UDP ports used:
- - Used port 12345 on mods for hub command recieving
- - Used port 12345 on hub for command feedback from mods
- - Used port 12346 on hub for poll recieving 
+### UDP ports used:
+ - Used port 12345 globally for command stream. command push and feedback
+ - Used port 12346 on hub for poll(heartbeat) recieving 
 
-NETCAT COMMANDS
-netcat -u 192.168.8.108 12345 command feedback 
-netcat -u 192.168.8.108 12346 or netcat -u -l -p 12346 polling to hub
+### network-level identifiers 
 
-netcat -u 192.168.8.213 12345 commands for D1
-netcat -u 192.168.8.238 12345 commands for D2
-netcat -u 192.168.9.0 12345 commands for D3
-netcat -u -l -p 12345 global commands/feedback
+D1 (door 1): 192.168.8.213
+D2 (door 2): 192.168.8.238
+D3 (door 3): 192.168.0.000
+
+### NETCAT COMMANDS
+netcat -u 192.168.8.108 12345 
+- all command feedbacks to hub
+netcat -u 192.168.8.108 12346 
+netcat -u -l -p 12346 
+- polling (heartbeat) to hub
+
+netcat -u 192.168.8.213 12345 
+    - commands sent to D1
+netcat -u 192.168.8.238 12345 
+    - commands sent to D2
+netcat -u 192.168.0.000 12345 
+    - commands sent to D3
+netcat -u -l -p 12345 
+    - global commands/feedback stream
+
+### door state channels
+D0: sensor (open/closed)
+D1: lock   (locked/unlocked)
 
 ## FRESH COMPILE
 CMAKE should make 2 executables:
 - door_system
-- doorMod
+- doorMod_cli
 
-door_system belongs on hub
-doorMod runs on the doors
+door_system runs on hub
+doorMod_cli runs on the doors
 
 ### Loading the Executables
 Connect to HUB wifi network
 
-Compile door_system, doorMod
+Compile door_system, doorMod_cli
 
 run commands from executable folder (when all connected):
 scp door_system melissa@192.168.8.108:/home/
-scp doorMod amytis@192.168.8.213:/home/
-scp doorMod simon@192.168.8.238:/home/
-scp doorMod <RICHARD_USER>@192.168.0.000:/home/
+scp doorMod_cli amytis@192.168.8.213:/home/
+scp doorMod_cli simon@192.168.8.238:/home/
+scp doorMod_cli <RICHARD_USER>@192.168.0.000:/home/
 
-Then SSH into each and run. or add to profile to auto run at startup
+add to PROFILE of each doorMod beagle:
+sudo ./doorMod_cli [MODULE_ID]
+
+MODULE_ID:
+amytis: "D1"
+simon: "D2"
+richard: "D3"
