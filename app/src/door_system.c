@@ -37,7 +37,18 @@ int main(int argc, char *argv[]){
     } else {
         door_udp_running = true;
     }
-    
+    // Initialize Discord
+    if (!discordStart()) {
+        fprintf(stderr, "Failed to initialize Discord\n");
+        return 1;
+    }
+    hub_udp_set_webhook_url("https://discord.com/api/webhooks/1444219627461673080/rrr5SoaN1RpNC_PGoIH_mFWFV8fB4PosUd6qGC24M3zfg6nsDnvXAhyTxtr5qDiZOJy2");
+
+    //start UDP listener
+    if (!hub_udp_init(8888)) {
+        fprintf(stderr, "Failed to initialize hub UDP\n");
+        return 1;
+    }
         // Start webhook reporter if provided via argv[3] or environment
         const char *webhook_url = (argc > 3) ? argv[3] : getenv("HUB_WEBHOOK_URL");
         bool webhook_running = false;

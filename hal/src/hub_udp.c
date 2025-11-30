@@ -48,6 +48,9 @@ void hub_udp_set_webhook_url(const char *url)
 }
 static void trigger_discord_alert(const char* module_id, const char* event_type, 
                                  const char* door, const char* state) {
+    if (g_webhook_url[0] == '\0') {
+        return; // No webhook URL set
+    }
     char alert_msg[256];
     snprintf(alert_msg, sizeof(alert_msg), 
              "[%s] %s %s is now %s", module_id, door, event_type, state);
