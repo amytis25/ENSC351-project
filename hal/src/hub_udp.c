@@ -1,7 +1,7 @@
 // hub_udp.c
 #define _POSIX_C_SOURCE 200809L
 #include "hub_udp.h"
-
+#include <curl/curl.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
+#include <hal/DiscordAlert.h>
 
 static int          g_sock        = -1;
 static pthread_t    g_thread_id;
@@ -36,6 +37,13 @@ static long long now_ms(void)
 }
 
 // ---------- internal helpers ----------
+static void trigger_discord_alert(const char* module_id, const char* event_type, 
+                                 const char* door, const char* state) {
+    char alert_msg[256];
+    snprintf(alert_msg, sizeof(alert_msg), 
+             "[%s] %s %s is now %s", module_id, door, event_type, state);
+    sendDiscordAlert(webook_url, alert_msg);
+}
 
 static HubDoorStatus *find_or_create_door(const char *module_id)
 {
