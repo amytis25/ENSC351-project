@@ -9,6 +9,7 @@
 #include "hal/door_udp_client.h"
 #include <unistd.h>
 #include <errno.h>
+#include "http_api.h"
 
 typedef struct {
     Door_t* door[4];
@@ -47,6 +48,13 @@ int main(int argc, char *argv[]){
             } else {
                 webhook_running = true;
             }
+        }
+
+        // Start local HTTP API for web UI commands (bind to localhost only)
+        if (!http_api_start("127.0.0.1", 8080, module_id)) {
+            fprintf(stderr, "Warning: http_api_start failed (web UI disabled)\n");
+        } else {
+            printf("HTTP API listening on 127.0.0.1:8080\n");
         }
 
     // ----------------------- UDP Communication Setup -----------------------
@@ -125,6 +133,8 @@ int main(int argc, char *argv[]){
         if (webhook_running) {
             hub_webhook_shutdown();
         }
+    // Stop HTTP API
+    http_api_stop();
 
     return 0;
 

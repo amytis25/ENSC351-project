@@ -1,6 +1,4 @@
-// server.js
-// link to Central Door System via UDP
-// Provides functions to get door status and send lock/unlock commands
+// gui/server.js — client for local door_system HTTP API
 
 const DoorState = {
     CLOSED: 'CLOSED',
@@ -11,31 +9,66 @@ const DoorState = {
     DISCONNECTED: 'DISCONNECTED'
 };
 
-// Internal simulated doors (id starts at 1)
-const doors = [
-    { id: 1, state: DoorState.UNLOCKED, dispState: DoorState.UNLOCKED},
-    { id: 2, state: DoorState.UNLOCKED, dispState: DoorState.UNLOCKED},
-    { id: 3, state: DoorState.UNLOCKED, dispState: DoorState.UNLOCKED},
-    { id: 4, state: DoorState.DISCONNECTED, dispState: DoorState.DISCONNECTED}
-];
-
-export function initializeDoorSystem() {
-// In the real system this would initialize sensors and motors.
-    
+function normalizeStatusJson(json) {
+    if (!json) return DoorState.DISCONNECTED;
+    if (typeof json.state !== 'undefined') {
+        switch (json.state) {
+            case 0: return DoorState.LOCKED;
+            case 1: return DoorState.UNLOCKED;
+            case 2: return DoorState.OPEN;
+            default: return DoorState.UNKNOWN;
+        }
+    }
+    if (typeof json.d0_open !== 'undefined' && typeof json.d0_locked !== 'undefined') {
+        if (json.d0_open) return DoorState.OPEN;
+        if (json.d0_locked) return DoorState.LOCKED;
+        return DoorState.UNLOCKED;
+    }
+    return DoorState.DISCONNECTED;
 }
 
-
-// Get status: may randomly flip to OPEN to simulate someone opening the door
-export async function getDoorStatus(id) {
-   
+export async function initializeDoorSystem() {
+    // noop for now
 }
 
-export async function lockDoor(id) {
-
+function formatModuleId(moduleId) {
+    if (moduleId === null || moduleId === undefined) return '';
+    const s = String(moduleId);
+    if (/^[Dd]\d+$/.test(s)) return s.toUpperCase();
+    if (/^\d+$/.test(s)) return `D${s}`;
+    return s; // leave as-is
 }
 
-export async function unlockDoor(id) {
+export async function getDoorStatus(moduleId) {
+    const mod = formatModuleId(moduleId);
+    try {
+        const res = await fetch(`/api/status?module=${encodeURIComponent(mod)}`);
+        if (!res.ok) return DoorState.DISCONNECTED;
+        const j = await res.json();
+        return normalizeStatusJson(j);
+    } catch (e) {
+        return DoorState.DISCONNECTED;
+    }
+}
 
+async function sendCommand(moduleId, target, action) {
+    const mod = formatModuleId(moduleId);
+    const body = `module=${encodeURIComponent(mod)}&target=${encodeURIComponent(target||'')}&action=${encodeURIComponent(action)}`;
+    const res = await fetch(`/api/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+export async function lockDoor(moduleId) {
+    return sendCommand(moduleId, 'D0', 'LOCK');
+}
+
+export async function unlockDoor(moduleId) {
+    return sendCommand(moduleId, 'D0', 'UNLOCK');
 }
 
 export { DoorState };

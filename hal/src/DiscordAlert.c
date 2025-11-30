@@ -6,7 +6,6 @@
 
 #include "hal/DiscordAlert.h"
 #include "hal/timing.h"
-#include "doorMod.h"
 
 // Discord Alert sending handling using libcurl
 static const char* webhook_URL = "https://discord.com/api/webhooks/1444219627461673080/rrr5SoaN1RpNC_PGoIH_mFWFV8fB4PosUd6qGC24M3zfg6nsDnvXAhyTxtr5qDiZOJy2";
@@ -51,9 +50,13 @@ void sendDiscordAlert(const char *webhook_url, const char *msg)
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 }
-// Door alert thread function
+// Door alert thread function. We intentionally do NOT include or reference
+// Door_t here. Instead, callers provide an `AlertMsgProvider` callback that
+// returns a freshly-allocated string describing the door state; this keeps
+// DiscordAlert decoupled from application internals.
 typedef struct {
-    Door_t door;
+    AlertMsgProvider provider;
+    void *provider_ctx;
     const char *webhook_url;
 } DoorMonitorCtx;
 
@@ -61,63 +64,50 @@ static pthread_t        doorThreadId;
 static atomic_bool      doorThreadRunning = false;
 static DoorMonitorCtx  *g_ctx = NULL;
 
-static const char *door_state_to_str(DoorState_t s)
-{
-    switch (s) {
-    case OPEN:     return "OPEN";
-    case LOCKED:   return "LOCKED";
-    case UNLOCKED: return "UNLOCKED";
-    default:       return "UNKNOWN";
-    }
-}
 void* doorAlertThread(void* arg) {
     DoorMonitorCtx *ctx = (DoorMonitorCtx *)arg;
-    Door_t *door = &ctx->door;
     const char *webhook_url = ctx->webhook_url;
-
-    DoorState_t last_state = UNKNOWN;
+    char *last_msg = NULL;
 
     // Optional: send initial status once at startup
-    *door = get_door_status(door);
-    last_state = door->state;
-    {
-        char msg[128];
-        snprintf(msg, sizeof(msg),
-                 "Door %d initial state: %s",
-                 door->id, door_state_to_str(door->state));
-        sendDiscordAlert(webhook_url, msg);
+    if (ctx->provider) {
+        char *m = ctx->provider(ctx->provider_ctx);
+        if (m) {
+            sendDiscordAlert(webhook_url, m);
+            last_msg = strdup(m);
+            free(m);
+        }
     }
 
     while (atomic_load(&doorThreadRunning)) {
-        *door = get_door_status(door);
-
-        if (door->state != last_state) {
-            last_state = door->state;
-
-            char msg[128];
-            snprintf(msg, sizeof(msg),
-                     "Door %d changed state: %s",
-                     door->id, door_state_to_str(door->state));
-            sendDiscordAlert(webhook_url, msg);
+        if (ctx->provider) {
+            char *m = ctx->provider(ctx->provider_ctx);
+            if (m) {
+                if (!last_msg || strcmp(m, last_msg) != 0) {
+                    sendDiscordAlert(webhook_url, m);
+                    free(last_msg);
+                    last_msg = strdup(m);
+                }
+                free(m);
+            }
         }
-
-        // Polling period; adjust if needed
         sleepForMs(500);
     }
 
+    free(last_msg);
     return NULL;
 }
-bool startDoorAlertMonitor(Door_t door, const char *webhook_url) {
+
+bool startDoorAlertMonitor(AlertMsgProvider provider, void *provider_ctx, const char *webhook_url) {
     if (atomic_load(&doorThreadRunning)) {
-        // Already running
         return false;
     }
 
     g_ctx = malloc(sizeof(DoorMonitorCtx));
-    if (!g_ctx) {
-        return false;
-    }
-    g_ctx->door = door;
+    if (!g_ctx) return false;
+
+    g_ctx->provider = provider;
+    g_ctx->provider_ctx = provider_ctx;
     g_ctx->webhook_url = webhook_url;
 
     atomic_store(&doorThreadRunning, true);
@@ -127,13 +117,11 @@ bool startDoorAlertMonitor(Door_t door, const char *webhook_url) {
         g_ctx = NULL;
         return false;
     }
-
     return true;
 }
+
 void stopDoorAlertMonitor() {
-    if (!atomic_load(&doorThreadRunning)) {
-        return;
-    }
+    if (!atomic_load(&doorThreadRunning)) return;
 
     atomic_store(&doorThreadRunning, false);
     pthread_join(doorThreadId, NULL);

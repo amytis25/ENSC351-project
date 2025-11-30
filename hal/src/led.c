@@ -2,7 +2,6 @@
 //contains LED patterns for door module and hub using PWM
 #include "hal/led.h"
 #include "hal/PWM.h"
-#include "doorMod.h"
 
 /* LED lock door
 // green on during lock mechanism (5hz?)

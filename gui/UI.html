@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="./style.css" />
     <script type="module" src="./main.js"></script>
+    <script type="module" src="./web_control.js"></script>
     <title>Door Control</title>
 </head>
 <body>
@@ -17,38 +18,40 @@
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
-                <div id="door1">
-                    <tr>
+                <tbody>
+                    <tr id="door1">
                         <td>Door 1</td>
-                        <td><span id="door1_status">Closed</span></td>
-                        <td><button type="button" id="toggle_door1" onclick="toggleDoor(1)">Lock Door</button></td>
+                        <td><span id="door1_status">unknown</span></td>
+                        <td>
+                            <button type="button" id="toggle_door1">Toggle</button>
+                            <div id="door1_message" class="msg"></div>
+                        </td>
                     </tr>
-                <tr id="door1_message"></tr>
-                </div>
-                <div id="door2"> 
-                    <tr>
+                    <tr id="door2">
                         <td>Door 2</td>
-                        <td><span id="door2_status">Closed</span></td>
-                        <td><button type="button" id="toggle_door2" onclick="toggleDoor(2)">Lock Door</button></td>
+                        <td><span id="door2_status">unknown</span></td>
+                        <td>
+                            <button type="button" id="toggle_door2">Toggle</button>
+                            <div id="door2_message" class="msg"></div>
+                        </td>
                     </tr>
-                    <tr id="door2_message"></tr>
-                </div>
-                <div id="door3">
-                    <tr>
+                    <tr id="door3">
                         <td>Door 3</td>
-                        <td><span id="door3_status">Closed</span></td>
-                        <td><button type="button" id="toggle_door3" onclick="toggleDoor(3)">Lock Door</button></td>
+                        <td><span id="door3_status">unknown</span></td>
+                        <td>
+                            <button type="button" id="toggle_door3">Toggle</button>
+                            <div id="door3_message" class="msg"></div>
+                        </td>
                     </tr>
-                    <tr id="door3_message"></tr>
-                </div>
-                <div id="door4">
-                    <tr>
+                    <tr id="door4">
                         <td>Door 4</td>
-                        <td><span id="door4_status">Closed</span></td>
-                        <td><button type="button" id="toggle_door4" onclick="toggleDoor(4)">Lock Door</button></td>
+                        <td><span id="door4_status">unknown</span></td>
+                        <td>
+                            <button type="button" id="toggle_door4">Toggle</button>
+                            <div id="door4_message" class="msg"></div>
+                        </td>
                     </tr>
-                    <tr id="door4_message"></tr>
-                </div>
+                </tbody>
             </table>
         </div>
     </div>
