@@ -10,7 +10,7 @@
 #include <string.h>
 #include <errno.h>
 #include "include/doorMod.h"
-#include "hal/door_udp_client.h"
+#include "hal/door_udp.h"
 #include "hal/led.h"
 #include "hal/led_worker.h"
 

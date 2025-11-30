@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include <time.h>
 #include <string.h>
-#include "hal/doorMod.h"
+#include "include/doorMod.h"
 #include "hal/hub_udp.h"
 #include "hal/led.h"
 #include "hal/led_worker.h"
-#include "hal/door_udp_client.h"
+#include "hal/door_udp.h"
 #include "hal/system_webhook.h"
 #include <stdlib.h>
 #include <unistd.h>

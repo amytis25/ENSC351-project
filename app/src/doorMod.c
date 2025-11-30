@@ -9,7 +9,9 @@
 #include "hal/led.h"
 #include "hal/led_worker.h"
 #include "include/doorMod.h"
-#include "hal/door_udp_client.h"
+#include "hal/door_udp.h"
+/* app handler init prototype */
+extern bool app_udp_handler_init(void);
 #include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -123,8 +125,8 @@ bool door_reporting_start(const char *hub_ip, uint16_t report_port, uint16_t hea
 {
     if (!hub_ip || !module_id) return false;
 
-    // Start notification and heartbeat reporting using HAL helper
-    if (!door_udp_init2(hub_ip, report_port, heartbeat_port, module_id, DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT, heartbeat_ms)) {
+    // Start notification reporting using HAL helper (heartbeat handled locally)
+    if (!door_udp_init2(hub_ip, report_port, heartbeat_port, module_id, DOOR_REPORT_NOTIFICATION, heartbeat_ms)) {
         // still allow heartbeat thread to run if desired
     }
 
@@ -176,6 +178,9 @@ bool initializeDoorSystem (){
     if (!LED_init()) {
         fprintf(stderr, "Warning: LED_init failed (continuing)\n");
     }
+
+    // Register app UDP command handler so the HAL transport forwards COMMANDs here
+    app_udp_handler_init();
 
     return true;
 }

@@ -1,6 +1,6 @@
-// door_udp_client.c
+// door_udp.c
 #define _POSIX_C_SOURCE 200809L
-#include "hal/door_udp_client.h"
+#include "hal/door_udp.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -12,9 +12,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
-
 #include <pthread.h>
-#include "hal/doorMod.h"
 #include "hal/timing.h"
 
 #define BUF_MAX 256
@@ -43,6 +41,26 @@ static bool g_prev_d1_locked= false;
 
 // Heartbeat timer
 static long long g_last_heartbeat_ms = 0;
+
+/* Registered command handler (set by the app layer) */
+static DoorCmdHandler g_cmd_handler = NULL;
+static void *g_cmd_handler_ctx = NULL;
+
+bool door_udp_register_command_handler(DoorCmdHandler handler, void *ctx)
+{
+    g_cmd_handler = handler;
+    g_cmd_handler_ctx = ctx;
+    return true;
+}
+
+bool door_udp_send_feedback(const char *module, int cmdid, const char *target, const char *action)
+{
+    if (g_sock < 0) return false;
+    char out[BUF_MAX];
+    snprintf(out, sizeof(out), "%s FEEDBACK %d %s %s\n", module, cmdid, target, action);
+    send_line_notif(out);
+    return true;
+}
 
 // ---------------- time helper ----------------
 static long long now_ms(void)
@@ -102,18 +120,14 @@ static void *door_cmd_thread(void *arg)
 
         // Only act on commands addressed to this module
         if (strcmp(mod, g_module_id) == 0) {
-            Door_t d = { .state = UNKNOWN };
-            if (strcmp(action, "LOCK") == 0) {
-                d = lockDoor(&d);
-            } else if (strcmp(action, "UNLOCK") == 0) {
-                d = unlockDoor(&d);
-            } else if (strcmp(action, "STATUS") == 0) {
-                d = get_door_status(&d);
+            if (g_cmd_handler) {
+                g_cmd_handler(mod, cmdid, target, action, g_cmd_handler_ctx);
+            } else {
+                // No handler registered: keep legacy behavior and send basic FEEDBACK
+                char out[BUF_MAX];
+                snprintf(out, sizeof(out), "%s FEEDBACK %d %s %s\n", g_module_id, cmdid, target, action);
+                send_line_notif(out);
             }
-            // Send simple ACK/feedback to hub
-            char out[BUF_MAX];
-            snprintf(out, sizeof(out), "%s FEEDBACK %d %s %s\n", g_module_id, cmdid, target, action);
-            send_line_notif(out);
         }
     }
     return NULL;
