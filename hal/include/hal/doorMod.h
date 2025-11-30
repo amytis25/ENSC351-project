@@ -32,3 +32,10 @@ Door_t unlockDoor (Door_t *door);
 
 // Get the current status of the door
 Door_t get_door_status (Door_t *door);
+
+// Reporting control (thin wrappers).
+// Start reporting: `report_port` used for notification messages, `heartbeat_port`
+// used for periodic heartbeat UDP packets. `heartbeat_ms` is interval in ms.
+bool door_reporting_start(const char *hub_ip, uint16_t report_port, uint16_t heartbeat_port,
+                         const char *module_id, int heartbeat_ms);
+void door_reporting_stop(void);

@@ -18,23 +18,21 @@ int main(int argc, char *argv[])
 {
     const char *module_id = (argc > 1) ? argv[1] : "D1";
     const char *hub_ip    = "192.168.8.108"; // fixed hub IP
-    bool door_udp_running = false;
+    bool reporting_running = false;
 
     if (!initializeDoorSystem()) {
         fprintf(stderr, "Failed to initialize door system\n");
         return EXIT_FAILURE;
     }
 
-    // Try to start UDP reporting (best-effort)
-        if (!door_udp_init(hub_ip, 12345, module_id,
-                           DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT,
-                           1000)) {
-            fprintf(stderr, "WARNING: door_udp_init failed; continuing without UDP reporting\n");
-            // Indicate network error via LED
-            LED_status_network_error();
-        } else {
-            door_udp_running = true;
-        }
+    // Try to start reporting (notifications + separate heartbeat port)
+    if (!door_reporting_start(hub_ip, 12345, 12346, module_id, 1000)) {
+        fprintf(stderr, "WARNING: reporting init failed; continuing without UDP reporting\n");
+        // Indicate network error via LED
+        LED_status_network_error();
+    } else {
+        reporting_running = true;
+    }
 
     Door_t door = { .state = UNKNOWN };
 
@@ -68,7 +66,7 @@ int main(int argc, char *argv[])
         printf("Unknown command\n");
     }
 
-    if (door_udp_running) door_udp_close();
+    if (reporting_running) door_reporting_stop();
 
     printf("Exiting doorMod CLI\n");
     return 0;

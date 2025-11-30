@@ -28,6 +28,7 @@ if(NOT WITH_TCP)
 	# Remove TCP related source files from the list if user disabled it.
 	list(FILTER MY_SOURCES EXCLUDE REGEX ".*/door_tcp_client.c$")
 endif()
+# Note: previously excluded duplicate `doorMod.c` in HAL; duplicate file removed.
 find_package(CURL REQUIRED)
 IF(CURL_FOUND)
   INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIR})
