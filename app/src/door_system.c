@@ -5,6 +5,7 @@
 #include <string.h>
 #include "doorMod.h"
 #include "hal/hub_udp.h"
+#include "hal/led.h"
 #include <unistd.h>
 #include <errno.h>
 
@@ -15,9 +16,12 @@ typedef struct {
 int main(){
     if (!initializeDoorSystem ()){
         printf("System initialization failed. Exiting.\n");
+        LED_status_door_error();
         return EXIT_FAILURE;
     } else {
         printf("System initialized successfully.\n");
+        // indicate ready: low-duty green steady
+        LED_set_green_steady(true, 30);
     }
 
     // ----------------------- UDP Communication Setup -----------------------
@@ -50,7 +54,10 @@ int main(){
                            st.d1_open   ? "OPEN" : "CLOSED",
                            st.d1_locked ? "LOCKED" : "UNLOCKED",
                            st.last_heartbeat_ms);
+                        // indicate hub command success briefly
+                        LED_hub_command_success();
                 } else {
+                        LED_hub_command_failure();
                     printf("No status for %s yet.\n", id);
                 }
             }
@@ -64,6 +71,11 @@ int main(){
                        events[i].timestamp_ms,
                        events[i].module_id,
                        events[i].line);
+            }
+            if (n > 0) {
+                LED_hub_command_success();
+            } else {
+                LED_hub_command_failure();
             }
         }
     }

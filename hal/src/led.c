@@ -1,2 +1,166 @@
 //led.c
-//contains functions to control the LEDs on door module and hub
+//contains LED patterns for door module and hub using PWM
+#include "hal/led.h"
+#include "hal/PWM.h"
+#include "doorMod.h"
+
+/* LED lock door
+// green on during lock mechanism (5hz?)
+// unsuccessful lock/unlock 5 red flashes @ 10Hz
+// green off
+// red flash at 2hz
+
+// successful lock/unlock 2 red flashes @ 7Hz
+// green on 
+*/
+
+/* LED unlock door 
+// green off
+// unsuccessful lock/unlock 5 red flashes @ 10Hz
+// red flash at 2hz
+
+// successful lock/unlock 2 red flashes @ 7Hz
+*/
+
+/* LED hub command
+// 2 red flashes @ 7Hz when success 
+
+// 5 red flashes @ 10Hz when unsuccessful
+*/
+
+// led.c
+// Implementations for LED control using PWM
+
+#include "hal/led.h"
+#include "hal/PWM.h"
+#include "hal/timing.h"
+#include <stdio.h>
+#include <stdbool.h>
+
+// Internal helper: blink a pin `flashes` times at `freqHz` with `dutyPercent`.
+// This is a blocking helper (uses sleeps). Caller may run in a thread if non-blocking behavior is required.
+static void blink_pin_n(const char *pin, int flashes, int freqHz, int dutyPercent)
+{
+	if (pin == NULL || flashes <= 0 || freqHz <= 0) return;
+
+	// Enable PWM at requested frequency and duty
+	if (!PWM_setFrequency_pin(pin, freqHz, dutyPercent)) return;
+
+	// total time = flashes * period
+	int period_ms = 1000 / freqHz;
+	int total_ms = period_ms * flashes;
+	sleepForMs(total_ms);
+
+	// turn off
+	PWM_disable_pin(pin);
+}
+
+// Initialization: export both PWM pins
+bool LED_init(void)
+{
+	bool ok = true;
+	if (!PWM_export_pin(LED_GREEN_PIN)) {
+		fprintf(stderr, "LED_init: failed to export %s\n", LED_GREEN_PIN);
+		ok = false;
+	}
+	if (!PWM_export_pin(LED_RED_PIN)) {
+		fprintf(stderr, "LED_init: failed to export %s\n", LED_RED_PIN);
+		ok = false;
+	}
+	return ok;
+}
+
+// Low-level steady control
+void LED_set_green_steady(bool on, int dutyPercent)
+{
+	if (!on) {
+		PWM_disable_pin(LED_GREEN_PIN);
+		return;
+	}
+	// Use a high PWM frequency so the LED appears steady.
+	if (!PWM_setFrequency_pin(LED_GREEN_PIN, 1000, dutyPercent)) {
+		fprintf(stderr, "LED_set_green_steady: failed to set PWM for %s\n", LED_GREEN_PIN);
+	}
+}
+
+void LED_set_red_steady(bool on, int dutyPercent)
+{
+	if (!on) {
+		PWM_disable_pin(LED_RED_PIN);
+		return;
+	}
+	if (!PWM_setFrequency_pin(LED_RED_PIN, 1000, dutyPercent)) {
+		fprintf(stderr, "LED_set_red_steady: failed to set PWM for %s\n", LED_RED_PIN);
+	}
+}
+
+// Blink helpers (blocking)
+void LED_blink_red_n(int flashes, int freqHz, int dutyPercent)
+{
+	blink_pin_n(LED_RED_PIN, flashes, freqHz, dutyPercent);
+}
+
+void LED_blink_green_n(int flashes, int freqHz, int dutyPercent)
+{
+	blink_pin_n(LED_GREEN_PIN, flashes, freqHz, dutyPercent);
+}
+
+// High-level sequences
+void LED_lock_success_sequence(void)
+{
+	// 2 red flashes @ 7Hz then green on steady (lower duty)
+	LED_blink_red_n(2, 7, 90);
+	LED_set_green_steady(true, 30);
+}
+
+void LED_lock_failure_sequence(void)
+{
+	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
+	LED_blink_red_n(5, 10, 90);
+	// slow red flash at 2Hz
+	if (!PWM_setFrequency_pin(LED_RED_PIN, 2, 50)) {
+		PWM_disable_pin(LED_RED_PIN);
+	}
+	// ensure green is off
+	PWM_disable_pin(LED_GREEN_PIN);
+}
+
+void LED_unlock_success_sequence(void)
+{
+	// same as lock success
+	LED_lock_success_sequence();
+}
+
+void LED_unlock_failure_sequence(void)
+{
+	// same as lock failure
+	LED_lock_failure_sequence();
+}
+
+void LED_hub_command_success(void)
+{
+	// 2 red flashes @ 7Hz
+	LED_blink_red_n(2, 7, 90);
+}
+
+void LED_hub_command_failure(void)
+{
+	// 5 red flashes @ 10Hz
+	LED_blink_red_n(5, 10, 90);
+}
+
+void LED_status_door_error(void)
+{
+	// red flash at 2Hz (continuous)
+	if (!PWM_setFrequency_pin(LED_RED_PIN, 2, 50)) {
+		PWM_disable_pin(LED_RED_PIN);
+	}
+}
+
+void LED_status_network_error(void)
+{
+	// green flash at 2Hz (continuous)
+	if (!PWM_setFrequency_pin(LED_GREEN_PIN, 2, 50)) {
+		PWM_disable_pin(LED_GREEN_PIN);
+	}
+}
