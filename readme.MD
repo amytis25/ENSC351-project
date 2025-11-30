@@ -114,6 +114,15 @@ iwctl --passphrase "defender351" station wlan0 connect "351network"
 
 to disconnect:
 iwctl station wlan0 disconnect
+##CURL INFORMATION
+The libcurl or curl library is a c library written clientside to transfer data to the internet.
+We'll use it to send discord alerts via HTTPs requests to a discord webhook url.
+This can be implemented on just the host beagle or all of them send independant alerts w/ multiple webhooks.
+
+How to install on Debian VM terminal:
+sudo apt update
+sudo apt install libcurl4-openssl-dev
+
 
 ## UDP/NETCAT INFORMATION
 UDP ports used:
