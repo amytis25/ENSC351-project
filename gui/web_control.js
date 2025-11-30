@@ -1,8 +1,12 @@
-import * as doorAdapter from './doorAdapter.js';
+// gui/web_control.js
+// Web-based control panel for Central Door System
+// Communicates with server.js to get door status and send commands from UDP
+
+import * as server from './server.js';
 
 async function refreshStatus() {
     for (let id = 1; id <= 4; id++) {
-        const state = await doorAdapter.getDoorStatus(id);
+        const state = await server.getDoorStatus(id);
         const span = document.getElementById(`door${id}_status`);
         const btn = document.getElementById(`toggle_door${id}`);
         const div = document.getElementById(`door${id}`);
@@ -33,14 +37,14 @@ async function refreshStatus() {
     }
 }
 async function toggleDoor(id) {
-    const state = await doorAdapter.getDoorStatus(id);
+    const state = await server.getDoorStatus(id);
     const messageSpan = document.getElementById(`door${id}_message`);
     if (state === 'LOCKED' && btn.textContent === 'Unlock Door') {
-        await doorAdapter.unlockDoor(id);
+        await server.unlockDoor(id);
         btn.textContent = 'Lock Door';
         btn.disabled = false;
     } else if (state === 'UNLOCKED' && btn.textContent === 'Lock Door') {
-        await doorAdapter.lockDoor(id);
+        await server.lockDoor(id);
         btn.textContent = 'Unlock Door';
         btn.disabled = false;
     } else {
@@ -49,17 +53,17 @@ async function toggleDoor(id) {
     }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-    doorAdapter.initializeDoorSystem();
+    server.initializeDoorSystem();
 
     // Wire up buttons
     for (let id = 1; id <= 2; id++) {
         const btn = document.getElementById(`toggle_door${id}`);
         btn.addEventListener('click', async () => {
-            const state = await doorAdapter.getDoorStatus(id);
+            const state = await server.getDoorStatus(id);
             if (state === 'LOCKED') {
-                await doorAdapter.unlockDoor(id);
+                await server.unlockDoor(id);
             } else if (state === 'UNLOCKED') {
-                await doorAdapter.lockDoor(id);
+                await server.lockDoor(id);
             }
             await refreshStatus();
         });

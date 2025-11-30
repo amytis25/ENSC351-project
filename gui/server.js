@@ -1,5 +1,6 @@
-// doorAdapter.js
-// link to Central Door System
+// server.js
+// link to Central Door System via UDP
+// Provides functions to get door status and send lock/unlock commands
 
 const DoorState = {
     CLOSED: 'CLOSED',
