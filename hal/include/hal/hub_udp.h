@@ -2,6 +2,10 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include <netinet/in.h>
+
+#define HUB_PORT_NOTIF 12345
+#define HUB_PORT_HB    12346
 
 #define HUB_MAX_DOORS    8
 #define HUB_MAX_HISTORY  256
@@ -21,6 +25,14 @@ typedef struct {
     long long last_event_ms;
 
     char last_heartbeat_line[HUB_LINE_LEN];
+    // Last known source address for this module (useful for forwarding commands)
+    int has_last_addr;
+    struct sockaddr_in last_addr;
+    // Last FEEDBACK seen from this module (for ACK matching)
+    long long last_feedback_ms;
+    char last_feedback_target[32];
+    char last_feedback_action[32];
+    int last_feedback_cmdid;
 } HubDoorStatus;
 
 typedef struct {
@@ -50,3 +62,6 @@ bool hub_udp_get_status(const char *module_id, HubDoorStatus *out);
 // Copy up to max_events most recent events into out[].
 // Returns number of events copied (<= max_events).
 int hub_udp_get_history(HubEvent *out, int max_events);
+
+// Send a command to a known module (returns true on send success)
+bool hub_udp_send_command(const char *module_id, const char *target, const char *action);

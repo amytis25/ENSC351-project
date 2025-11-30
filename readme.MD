@@ -125,19 +125,35 @@ sudo apt install libcurl4-openssl-dev
 
 
 ## UDP/NETCAT INFORMATION
-UDP ports used:
- - Used port 12345 on mods for hub command recieving
- - Used port 12345 on hub for command feedback from mods
- - Used port 12346 on hub for poll recieving 
+### UDP ports used:
+ - Used port 12345 globally for command stream. command push and feedback
+ - Used port 12346 on hub for poll(heartbeat) recieving 
 
-NETCAT COMMANDS
-netcat -u 192.168.8.108 12345 command feedback 
-netcat -u 192.168.8.108 12346 or netcat -u -l -p 12346 polling to hub
+### network-level identifiers 
 
-netcat -u 192.168.8.213 12345 commands for D1
-netcat -u 192.168.8.238 12345 commands for D2
-netcat -u 192.168.9.0 12345 commands for D3
-netcat -u -l -p 12345 global commands/feedback
+D1 (door 1): 192.168.8.213
+D2 (door 2): 192.168.8.238
+D3 (door 3): 192.168.0.000
+
+### NETCAT COMMANDS
+netcat -u 192.168.8.108 12345 
+- all command feedbacks to hub
+netcat -u 192.168.8.108 12346 
+netcat -u -l -p 12346 
+- polling (heartbeat) to hub
+
+netcat -u 192.168.8.213 12345 
+    - commands sent to D1
+netcat -u 192.168.8.238 12345 
+    - commands sent to D2
+netcat -u 192.168.0.000 12345 
+    - commands sent to D3
+netcat -u -l -p 12345 
+    - global commands/feedback stream
+
+### door state channels
+D0: sensor (open/closed)
+D1: lock   (locked/unlocked)
 
 ## FRESH COMPILE
 CMAKE should make 2 executables:

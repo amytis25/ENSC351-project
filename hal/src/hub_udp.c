@@ -1,8 +1,11 @@
 // hub_udp.c
 #define _POSIX_C_SOURCE 200809L
-#include "hub_udp.h"
+#include "hal/hub_udp.h"
+#include "hal/timing.h"
 #include <curl/curl.h>
 #include <arpa/inet.h>
+#include "hal/led.h"
+#include "hal/led_worker.h"
 #include <errno.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -14,6 +17,7 @@
 #include <hal/DiscordAlert.h>
 
 static int          g_sock        = -1;
+static int          g_sock2       = -1;
 static pthread_t    g_thread_id;
 static int          g_listen_port = 0;
 static volatile int g_stopping    = 0;
@@ -21,6 +25,8 @@ static char         g_webhook_url[512] = {0};  // Discord webhook URL
 
 
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  g_feedback_cond = PTHREAD_COND_INITIALIZER;
+static int             g_next_cmdid = 1;
 
 // Per-door status
 static HubDoorStatus g_doors[HUB_MAX_DOORS];
@@ -103,19 +109,25 @@ static void parse_d_state(const char *token,
     char first[32] = {0};
     char second[32] = {0};
 
-    // Split on comma
+    // Split on comma if present. Be tolerant: accept either "A,B" or a
+    // single value (e.g., "OPEN" or "LOCKED"). If single value is
+    // provided, set whichever field it corresponds to.
     const char *comma = strchr(states, ',');
-    if (!comma) return;
-    size_t len1 = (size_t)(comma - states);
-    size_t len2 = strlen(comma + 1);
-
-    if (len1 >= sizeof(first)) len1 = sizeof(first) - 1;
-    if (len2 >= sizeof(second)) len2 = sizeof(second) - 1;
-
-    memcpy(first, states, len1);
-    first[len1] = '\0';
-    memcpy(second, comma + 1, len2);
-    second[len2] = '\0';
+    if (comma) {
+        size_t len1 = (size_t)(comma - states);
+        size_t len2 = strlen(comma + 1);
+        if (len1 >= sizeof(first)) len1 = sizeof(first) - 1;
+        if (len2 >= sizeof(second)) len2 = sizeof(second) - 1;
+        memcpy(first, states, len1);
+        first[len1] = '\0';
+        memcpy(second, comma + 1, len2);
+        second[len2] = '\0';
+    } else {
+        // only one value present
+        strncpy(first, states, sizeof(first)-1);
+        first[sizeof(first)-1] = '\0';
+        second[0] = '\0';
+    }
 
     // Normalize to uppercase-ish compare
     // We can just strcmp with expected strings.
@@ -129,9 +141,20 @@ static void parse_d_state(const char *token,
     } else if (strcmp(second, "UNLOCKED") == 0) {
         *p_locked = false;
     }
+
+    /* If there was no second value (single token), attempt to interpret
+     * `first` as LOCKED/UNLOCKED as well. This allows tokens like
+     * D1=LOCKED to update the locked field. */
+    if (second[0] == '\0') {
+        if (strcmp(first, "LOCKED") == 0) {
+            *p_locked = true;
+        } else if (strcmp(first, "UNLOCKED") == 0) {
+            *p_locked = false;
+        }
+    }
 }
 
-static void handle_line(char *line)
+static void handle_line(char *line, struct sockaddr_in *src)
 {
     long long t = now_ms();
 
@@ -140,6 +163,12 @@ static void handle_line(char *line)
     char *mod  = strtok_r(line, " \t\r\n", &save);
     if (!mod) return;
     char *type = strtok_r(NULL, " \t\r\n", &save);
+    /* If this packet arrived on the heartbeat socket (g_sock2), treat it
+     * as a HEARTBEAT regardless of the textual type. */
+    if (src && src->sin_port == 0) {
+        /* nothing */
+    }
+    if (!type) return;
     if (!type) return;
 
     HubDoorStatus *door = NULL;
@@ -154,6 +183,12 @@ static void handle_line(char *line)
         return;
     }
 
+    /* Store last source address for this door so we can forward commands */
+    if (src) {
+        door->last_addr = *src;
+        door->has_last_addr = 1;
+    }
+
     // Record in history (using the original text would be nicer, but
     // strtok_r modified it; we can reconstruct a simple line).
     // For history, store just "<TYPE> ..." plus module_id.
@@ -163,19 +198,25 @@ static void handle_line(char *line)
     add_history(mod, hist_line, t);
 
     if (strcmp(type, "HEARTBEAT") == 0) {
-        // Expect tokens like: D0=OPEN,LOCKED D1=CLOSED,UNLOCKED
+        /* Parse tokens if present but be tolerant: parse_d_state will
+         * accept comma-pairs or single tokens. */
         char *tok = NULL;
+        char hb_buf[HUB_LINE_LEN] = {0};
         while ((tok = strtok_r(NULL, " \t\r\n", &save)) != NULL) {
             if (strncmp(tok, "D0=", 3) == 0) {
                 parse_d_state(tok, &door->d0_open, &door->d0_locked);
             } else if (strncmp(tok, "D1=", 3) == 0) {
                 parse_d_state(tok, &door->d1_open, &door->d1_locked);
             }
+            if (hb_buf[0] != '\0') strncat(hb_buf, " ", sizeof(hb_buf)-strlen(hb_buf)-1);
+            strncat(hb_buf, tok, sizeof(hb_buf)-strlen(hb_buf)-1);
         }
         door->last_heartbeat_ms = t;
-        snprintf(door->last_heartbeat_line,
-                 sizeof(door->last_heartbeat_line),
-                 "%s", hist_line);
+        if (hb_buf[0] != '\0') {
+            snprintf(door->last_heartbeat_line, sizeof(door->last_heartbeat_line), "%s", hb_buf);
+        } else {
+            snprintf(door->last_heartbeat_line, sizeof(door->last_heartbeat_line), "%s", hist_line);
+        }
     } else if (strcmp(type, "EVENT") == 0) {
         // EVENT <D0|D1> <DOOR|LOCK> <STATE>
         char *which = strtok_r(NULL, " \t\r\n", &save);
@@ -214,6 +255,25 @@ static void handle_line(char *line)
             }
         }
         door->last_event_ms = t;
+    } else if (strcmp(type, "FEEDBACK") == 0) {
+        // FEEDBACK <CMDID> <TARGET> <ACTION>
+        char *cmdid_s = strtok_r(NULL, " \t\r\n", &save);
+        char *target = strtok_r(NULL, " \t\r\n", &save);
+        char *action = strtok_r(NULL, " \t\r\n", &save);
+        int cmdid = 0;
+        if (cmdid_s) cmdid = atoi(cmdid_s);
+        if (target && action) {
+            snprintf(door->last_feedback_target, sizeof(door->last_feedback_target), "%s", target);
+            snprintf(door->last_feedback_action, sizeof(door->last_feedback_action), "%s", action);
+            door->last_feedback_ms = t;
+            door->last_feedback_cmdid = cmdid;
+            // also record in history
+            char fbline[HUB_LINE_LEN];
+            snprintf(fbline, sizeof(fbline), "FEEDBACK %d %s %s", cmdid, target, action);
+            add_history(mod, fbline, t);
+            // notify any waiter(s)
+            pthread_cond_broadcast(&g_feedback_cond);
+        }
     } else {
         // HELLO or unknown, just history+timestamp
         door->last_event_ms = t;
@@ -233,18 +293,50 @@ static void *udp_thread(void *arg)
     char buf[HUB_LINE_LEN];
 
     while (!g_stopping) {
-        ssize_t n = recvfrom(g_sock, buf, sizeof(buf) - 1, 0,
-                             (struct sockaddr *)&src, &src_len);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            perror("hub_udp: recvfrom");
-            usleep(1000);
-            continue;
-        }
-        buf[n] = '\0';
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        int maxfd = -1;
+        if (g_sock >= 0) { FD_SET(g_sock, &rfds); maxfd = g_sock; }
+        if (g_sock2 >= 0) { FD_SET(g_sock2, &rfds); if (g_sock2 > maxfd) maxfd = g_sock2; }
 
-        // We modify buf during parsing, so work on a local copy
-        handle_line(buf);
+        struct timeval tv;
+        tv.tv_sec = 0; tv.tv_usec = 500000; // 500 ms
+        int r = select(maxfd + 1, &rfds, NULL, NULL, &tv);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            perror("hub_udp: select");
+            sleepForMs(1);
+            continue;
+        } else if (r == 0) {
+            continue; // timeout
+        }
+
+        int fd = -1;
+        if (g_sock >= 0 && FD_ISSET(g_sock, &rfds)) fd = g_sock;
+        else if (g_sock2 >= 0 && FD_ISSET(g_sock2, &rfds)) fd = g_sock2;
+        if (fd < 0) continue;
+
+        /* Drain any queued datagrams for this ready socket so multiple
+         * heartbeats (or other packets) that arrived nearly simultaneously
+         * are processed in order without waiting for the next select().
+         * Use MSG_DONTWAIT to avoid blocking; loop until EAGAIN/EWOULDBLOCK. */
+        while (1) {
+            ssize_t n = recvfrom(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT,
+                                 (struct sockaddr *)&src, &src_len);
+            if (n < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    break; // no more datagrams available
+                }
+                if (errno == EINTR) continue;
+                perror("hub_udp: recvfrom");
+                break;
+            }
+            if (n == 0) break;
+            buf[n] = '\0';
+            // We modify buf during parsing, so pass the source address
+            handle_line(buf, &src);
+            // continue to drain any additional queued datagrams
+        }
     }
 
     return NULL;
@@ -252,34 +344,58 @@ static void *udp_thread(void *arg)
 
 // ---------- public API ----------
 
-bool hub_udp_init(uint16_t listen_port)
+bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2)
 {
-    if (g_sock >= 0) {
+    if (g_sock >= 0 || g_sock2 >= 0) {
         fprintf(stderr, "hub_udp_init: already initialized\n");
         return false;
     }
 
-    g_listen_port = listen_port;
+    g_listen_port = listen_port1;
 
-    int s = socket(AF_INET, SOCK_DGRAM, 0);
-    if (s < 0) {
+    int s1 = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s1 < 0) {
         perror("hub_udp: socket");
         return false;
     }
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family      = AF_INET;
-    addr.sin_port        = htons(listen_port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct sockaddr_in addr1;
+    memset(&addr1, 0, sizeof(addr1));
+    addr1.sin_family      = AF_INET;
+    addr1.sin_port        = htons(listen_port1);
+    addr1.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        perror("hub_udp: bind");
-        close(s);
+    if (bind(s1, (struct sockaddr *)&addr1, sizeof(addr1)) < 0) {
+        perror("hub_udp: bind port1");
+        close(s1);
         return false;
     }
 
-    g_sock = s;
+    g_sock = s1;
+
+    if (listen_port2 != 0) {
+        int s2 = socket(AF_INET, SOCK_DGRAM, 0);
+        if (s2 < 0) {
+            perror("hub_udp: socket2");
+            close(g_sock);
+            g_sock = -1;
+            return false;
+        }
+        struct sockaddr_in addr2;
+        memset(&addr2, 0, sizeof(addr2));
+        addr2.sin_family      = AF_INET;
+        addr2.sin_port        = htons(listen_port2);
+        addr2.sin_addr.s_addr = htonl(INADDR_ANY);
+        if (bind(s2, (struct sockaddr *)&addr2, sizeof(addr2)) < 0) {
+            perror("hub_udp: bind port2");
+            close(s2);
+            close(g_sock);
+            g_sock = -1;
+            return false;
+        }
+        g_sock2 = s2;
+    }
+
     g_stopping = 0;
 
     // Clear state
@@ -292,10 +408,14 @@ bool hub_udp_init(uint16_t listen_port)
 
     if (pthread_create(&g_thread_id, NULL, udp_thread, NULL) != 0) {
         perror("hub_udp: pthread_create");
-        close(g_sock);
-        g_sock = -1;
+        if (g_sock2 >= 0) close(g_sock2);
+        if (g_sock >= 0) close(g_sock);
+        g_sock = -1; g_sock2 = -1;
         return false;
     }
+
+    /* LED worker is started by LED_init() to guarantee proper ordering
+     * with hardware initialization. */
 
     return true;
 }
@@ -308,8 +428,9 @@ void hub_udp_shutdown(void)
     // poke the socket by sending a dummy packet to ourselves (optional)
 
     pthread_join(g_thread_id, NULL);
-    close(g_sock);
-    g_sock = -1;
+    if (g_sock >= 0) { close(g_sock); g_sock = -1; }
+    if (g_sock2 >= 0) { close(g_sock2); g_sock2 = -1; }
+    /* LED worker shutdown is handled by LED_shutdown() where appropriate. */
 }
 
 bool hub_udp_get_status(const char *module_id, HubDoorStatus *out)
@@ -347,4 +468,96 @@ int hub_udp_get_history(HubEvent *out, int max_events)
     pthread_mutex_unlock(&g_mutex);
 
     return count;
+}
+
+// Send a command to a known module by using its last known source address.
+bool hub_udp_send_command(const char *module_id, const char *target, const char *action)
+{
+    if (!module_id || !target || !action) return false;
+
+    // Configuration for ACK wait/retries
+    const int ACK_TIMEOUT_MS = 500; // wait per attempt
+    const int ACK_RETRIES = 2; // number of retries after initial send
+
+    pthread_mutex_lock(&g_mutex);
+    HubDoorStatus *door = NULL;
+    for (int i = 0; i < HUB_MAX_DOORS; i++) {
+        if (g_doors[i].known && strncmp(g_doors[i].module_id, module_id, HUB_MODULE_ID_LEN) == 0) {
+            door = &g_doors[i];
+            break;
+        }
+    }
+    if (!door || !door->has_last_addr) {
+        pthread_mutex_unlock(&g_mutex);
+        return false;
+    }
+
+    struct sockaddr_in dest = door->last_addr;
+
+    // Allocate a cmdid atomically using g_mutex
+    int cmdid = g_next_cmdid++;
+    pthread_mutex_unlock(&g_mutex);
+
+    // Prepare message (include cmdid)
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%s COMMAND %d %s %s\n", module_id, cmdid, target, action);
+
+    int attempt = 0;
+    while (attempt <= ACK_RETRIES) {
+        int s = socket(AF_INET, SOCK_DGRAM, 0);
+        if (s < 0) {
+            attempt++;
+            sleepForMs(1);
+            continue;
+        }
+        ssize_t n = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&dest, sizeof(dest));
+        close(s);
+        if (n != (ssize_t)strlen(buf)) {
+            attempt++;
+            // small backoff
+            sleepForMs(20 * (1 << attempt));
+            continue;
+        }
+
+        // Wait for FEEDBACK with matching cmdid
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += (ACK_TIMEOUT_MS / 1000);
+        ts.tv_nsec += (ACK_TIMEOUT_MS % 1000) * 1000000;
+        if (ts.tv_nsec >= 1000000000) { ts.tv_sec += 1; ts.tv_nsec -= 1000000000; }
+
+        pthread_mutex_lock(&g_mutex);
+        int rc = 0;
+        while (door->last_feedback_cmdid < cmdid) {
+            rc = pthread_cond_timedwait(&g_feedback_cond, &g_mutex, &ts);
+            if (rc == ETIMEDOUT) break;
+        }
+
+        bool got = false;
+        if (door->last_feedback_cmdid >= cmdid) {
+            // match target/action too just to be safe
+            if (strncmp(door->last_feedback_target, target, sizeof(door->last_feedback_target)) == 0 &&
+                strncmp(door->last_feedback_action, action, sizeof(door->last_feedback_action)) == 0) {
+                got = true;
+            }
+        }
+        pthread_mutex_unlock(&g_mutex);
+
+            if (got) {
+                // indicate success (non-blocking) via LED worker
+                LED_enqueue_hub_command_success();
+                return true;
+            }
+
+        // else try again with exponential backoff
+        attempt++;
+        sleepForMs(50 * attempt);
+    }
+
+    // All attempts failed: signal failure via LEDs (non-blocking)
+    // enqueue failure sequence (non-blocking)
+    LED_enqueue_blink_red_n(5, 2, 50);
+    LED_enqueue_status_network_error();
+
+    return false;
 }

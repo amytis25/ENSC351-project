@@ -1,0 +1,12 @@
+[Unit]
+Description=Door System Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/melissa/ENSC351/work/351Project/ENSC351-project
+ExecStart=/home/melissa/ENSC351/work/351Project/ENSC351-project/build/door_system
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

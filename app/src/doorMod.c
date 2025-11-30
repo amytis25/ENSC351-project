@@ -17,39 +17,43 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+// forward declaration for helper used below
+static void update_last_known_state(const Door_t *door);
 
 // Small helper to map Door_t -> UDP booleans
 static void report_door_state_udp(Door_t *door)
 {
-    // We only send well-defined states; UNKNOWN leaves last value on hub.
+    // Map hardware to protocol channels:
+    // D0 -> door open/close sensor
+    // D1 -> lock state (locked/unlocked)
+    if (!door) return;
+
     bool d0_open = false;
-    bool d0_locked = false;
+    bool d0_locked = false; // unused for door sensor
+    bool d1_open = false;   // unused for lock
+    bool d1_locked = false;
 
-    switch (door->state) {
-        case OPEN:
-            d0_open = true;
-            d0_locked = false;
-            break;
-        case LOCKED:
-            d0_open = false;
-            d0_locked = true;
-            break;
-        case UNLOCKED:
-            d0_open = false;
-            d0_locked = false;
-            break;
-        case UNKNOWN:
-        default:
-            // Don't send anything; we don't have a clean mapping.
-            return;
+    // Door open/close from ultrasonic distance
+    long long distance = get_distance();
+    if (distance == -1) {
+        // sensor error: don't send
+        return;
     }
+    // Threshold: distance >= 10 means open (matches existing logic)
+    d0_open = (distance >= 10);
 
-    // This module only has one physical door, so D1 is unused.
-    // D1 is reported as CLOSED & UNLOCKED (placeholder).
-    door_udp_update(d0_open, d0_locked, false, false);
-    // Update last-known state/time for heartbeat
+    // Lock state from stepper position: 180 = locked
+    d1_locked = (StepperMotor_GetPosition() == 180);
+
+    // Send mapping: D0 is door sensor; D1 is lock state
+    door_udp_update(d0_open, d0_locked, d1_open, d1_locked);
+
+    // Update last-known state/time for heartbeat using existing Door_t semantics
     update_last_known_state(door);
 }
+
+// forward declaration for helper used below
+static void update_last_known_state(const Door_t *door);
 
 // --- Heartbeat & reporting support ---
 static pthread_t __heartbeat_thread;
@@ -119,8 +123,8 @@ bool door_reporting_start(const char *hub_ip, uint16_t report_port, uint16_t hea
 {
     if (!hub_ip || !module_id) return false;
 
-    // Start notification reporting using HAL helper (notifications only)
-    if (!door_udp_init(hub_ip, report_port, module_id, DOOR_REPORT_NOTIFICATION, heartbeat_ms)) {
+    // Start notification and heartbeat reporting using HAL helper
+    if (!door_udp_init2(hub_ip, report_port, heartbeat_port, module_id, DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT, heartbeat_ms)) {
         // still allow heartbeat thread to run if desired
     }
 
@@ -151,7 +155,6 @@ void door_reporting_stop(void)
 {
     // stop heartbeat
     __heartbeat_running = 0;
-    pthread_cond_t tmpcond;
     pthread_join(__heartbeat_thread, NULL);
     if (__report_module_id) {
         free(__report_module_id);

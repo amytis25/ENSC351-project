@@ -5,67 +5,78 @@
 import * as server from './server.js';
 
 async function refreshStatus() {
-    for (let id = 1; id <= 4; id++) {
-        const state = await server.getDoorStatus(id);
+    for (let id = 1; id <= 3; id++) {
+        const info = await server.getDoorInfo(id);
         const span = document.getElementById(`door${id}_status`);
         const btn = document.getElementById(`toggle_door${id}`);
         const div = document.getElementById(`door${id}`);
-        // display as human-friendly lowercase
-        span.textContent = state.toLowerCase();
-        if (state === 'DISCONNECTED') {
-            div.style.display = 'block';
-            div.style.display = 'none';
+        const msg = document.getElementById(`door${id}_message`);
+
+        if (!span || !btn || !div) continue;
+
+        msg && (msg.textContent = '');
+
+        if (!info) {
+            span.textContent = 'disconnected';
+            btn.textContent = 'Unavailable';
             btn.disabled = true;
+            continue;
         }
-        else if (state === 'LOCKED') {
-            span.textContent = 'locked';
+
+        // Show combined human-friendly status and lock state
+        const open = info.frontDoorOpen;
+        const locked = info.frontLockLocked;
+        span.textContent = `${open ? 'open' : 'closed'} / ${locked ? 'locked' : 'unlocked'}`;
+
+        if (open) {
+            btn.textContent = 'Cannot lock open door';
+            btn.disabled = true;
+        } else if (locked) {
             btn.textContent = 'Unlock Door';
             btn.disabled = false;
-        } else if (state === 'UNLOCKED') {
-            span.textContent = 'unlocked';
+        } else {
             btn.textContent = 'Lock Door';
             btn.disabled = false;
-        } else if (state === 'OPEN') {
-            span.textContent = 'open';
-            btn.textContent = 'cannot lock open door';
-            btn.disabled = true;
-        } else {
-            span.textContent = 'unknown';
-            btn.textContent = 'Cannot access door';
-            btn.disabled = true;
         }
     }
 }
+
 async function toggleDoor(id) {
-    const state = await server.getDoorStatus(id);
-    const messageSpan = document.getElementById(`door${id}_message`);
-    if (state === 'LOCKED' && btn.textContent === 'Unlock Door') {
-        await server.unlockDoor(id);
-        btn.textContent = 'Lock Door';
-        btn.disabled = false;
-    } else if (state === 'UNLOCKED' && btn.textContent === 'Lock Door') {
-        await server.lockDoor(id);
-        btn.textContent = 'Unlock Door';
-        btn.disabled = false;
-    } else {
-        span.textContent = state;
-        messageSpan.textContent = `connection error with door ${id}.`;
+    const btn = document.getElementById(`toggle_door${id}`);
+    const msg = document.getElementById(`door${id}_message`);
+    if (!btn) return;
+
+    const info = await server.getDoorInfo(id);
+    if (!info) {
+        msg && (msg.textContent = 'No connection to door');
+        return;
     }
+
+    try {
+        if (info.frontDoorOpen) {
+            msg && (msg.textContent = 'Door is open; cannot change lock');
+            return;
+        }
+        if (info.frontLockLocked) {
+            await server.unlockDoor(id);
+        } else {
+            await server.lockDoor(id);
+        }
+    } catch (e) {
+        msg && (msg.textContent = `Error: ${e.message}`);
+    }
+    await refreshStatus();
 }
+
 document.addEventListener('DOMContentLoaded', async () => {
     server.initializeDoorSystem();
 
-    // Wire up buttons
-    for (let id = 1; id <= 2; id++) {
+    // Wire up buttons for doors 1..3
+    for (let id = 1; id <= 3; id++) {
         const btn = document.getElementById(`toggle_door${id}`);
+        if (!btn) continue;
         btn.addEventListener('click', async () => {
-            const state = await server.getDoorStatus(id);
-            if (state === 'LOCKED') {
-                await server.unlockDoor(id);
-            } else if (state === 'UNLOCKED') {
-                await server.lockDoor(id);
-            }
-            await refreshStatus();
+            await toggleDoor(id);
         });
     }
 

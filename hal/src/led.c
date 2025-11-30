@@ -2,7 +2,7 @@
 //contains LED patterns for door module and hub using PWM
 #include "hal/led.h"
 #include "hal/PWM.h"
-#include "doorMod.h"
+#include "hal/led_worker.h"
 
 /* LED lock door
 // green on during lock mechanism (5hz?)
@@ -67,7 +67,18 @@ bool LED_init(void)
 		fprintf(stderr, "LED_init: failed to export %s\n", LED_RED_PIN);
 		ok = false;
 	}
+	if (ok) {
+		/* Start the LED worker so callers can enqueue non-blocking LED tasks. */
+		LED_worker_init();
+	}
+
 	return ok;
+}
+
+// Shutdown helper: ensure the worker is stopped. Call at program exit.
+void LED_shutdown(void)
+{
+	LED_worker_shutdown();
 }
 
 // Low-level steady control

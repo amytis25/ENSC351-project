@@ -13,6 +13,10 @@
 // Initialization: export PWM pins for LEDs. Returns true on success.
 bool LED_init(void);
 
+// Shutdown: stop any worker and cleanup. Call at program exit when LED
+// hardware is no longer required.
+void LED_shutdown(void);
+
 // Low-level helpers
 // Set steady output on/off. `dutyPercent` is 0-100 (ignored if on==false).
 void LED_set_green_steady(bool on, int dutyPercent);

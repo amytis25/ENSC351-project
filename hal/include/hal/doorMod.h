@@ -1,6 +1,7 @@
 #include <stdio.h> // fopen, fprintf, fclose, perror
 #include <stdlib.h>  // exit, EXIT_FAILURE, EXIT_SUCCESS
 #include <stdbool.h>
+#include <stdint.h>
 #include <time.h>
 #include "hal/HC-SR04.h"
 #include "hal/GPIO.h"
@@ -23,6 +24,11 @@ typedef struct {
 
 // Initialize the door system
 bool initializeDoorSystem ();
+
+// Start/stop UDP reporting (notifications + heartbeat)
+bool door_reporting_start(const char *hub_ip, uint16_t report_port, uint16_t heartbeat_port,
+                          const char *module_id, int heartbeat_ms);
+void door_reporting_stop(void);
 
 // Lock the door
 Door_t lockDoor (Door_t *door);

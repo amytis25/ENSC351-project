@@ -13,6 +13,9 @@ include_directories(app/include)
 
 file(GLOB MY_SOURCES "src/*.c")
 
+# Exclude doorMod implementation if it's provided in the app layer
+list(FILTER MY_SOURCES EXCLUDE REGEX ".*/doorMod.c$")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/DiscordAlert.c")
     set(WITH_DISCORD ON CACHE BOOL "Enable Discord webhook support" FORCE)
 endif()
@@ -48,6 +51,10 @@ target_include_directories(hal PUBLIC
 
 # Link required libraries for LED control and timing
 target_link_libraries(hal PUBLIC rt)  # For nanosleep and real-time functions
+if(WITH_DISCORD)
+	# Link libcurl when building with Discord webhook support
+	target_link_libraries(hal PUBLIC ${CURL_LIBRARIES})
+endif()
 if(WITH_DISCORD)
 	message(STATUS "HAL: Building with DiscordAlert support")
 else()
