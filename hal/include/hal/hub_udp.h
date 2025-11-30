@@ -36,8 +36,9 @@ typedef struct {
 void hub_udp_set_webhook_url(const char *url);
 
 
-// Start UDP listener thread on given port.
-bool hub_udp_init(uint16_t listen_port);
+// Start UDP listener thread on two ports. If listen_port2 == 0, only
+// listen on the first port. Returns true on success.
+bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2);
 
 // Stop thread and close socket.
 void hub_udp_shutdown(void);
