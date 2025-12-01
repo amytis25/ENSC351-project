@@ -117,10 +117,9 @@ iwctl station wlan0 disconnect
 
 ## CURL INFORMATION
 The libcurl or curl library is a c library written clientside to transfer data to the internet.
-We'll use it to send discord alerts via HTTPs requests to a discord webhook url.
-This can be implemented on just the host beagle or all of them send independant alerts w/ multiple webhooks.
+We'll use it to send discord alerts from the host unit via HTTPs requests to a discord webhook url.
 
-How to install on Debian VM terminal:
+### Install on host:
 sudo apt update
 sudo apt install libcurl4-openssl-dev
 
@@ -161,7 +160,7 @@ CMAKE should make 2 executables:
 - door_system
 - doorMod_cli
 
-door_system belongs on hub
+door_system runs on hub
 doorMod_cli runs on the doors
 
 ### Loading the Executables
