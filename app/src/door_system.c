@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <time.h>
 #include <string.h>
-#include "include/doorMod.h"
 #include "hal/hub_udp.h"
 #include "hal/led.h"
 #include "hal/led_worker.h"
@@ -12,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include "doorMod.h"
 #include "http_api.h"
 #include "discord_alert.h"
 

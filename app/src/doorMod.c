@@ -8,7 +8,7 @@
 #include "hal/StepperMotor.h"
 #include "hal/led.h"
 #include "hal/led_worker.h"
-#include "include/doorMod.h"
+#include "doorMod.h"
 #include "hal/door_udp.h"
 /* app handler init prototype */
 extern bool app_udp_handler_init(void);

@@ -27,6 +27,10 @@ static pthread_t g_cmd_thread;
 static volatile int g_cmd_running = 0;
 static uint16_t g_bound_notif_port = 0;
 
+// Forward declarations for helpers used before their definitions
+static void send_line_notif(const char *line);
+static void send_line_hb(const char *line);
+
 // Module identity + reporting settings
 static char           g_module_id[16]       = "M?";
 static DoorReportMode g_mode                = DOOR_REPORT_NOTIFICATION;

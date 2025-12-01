@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "hal/door_udp.h"
-#include "include/doorMod.h"
+#include "doorMod.h"
 
 static void app_command_handler(const char *module, int cmdid, const char *target, const char *action, void *ctx)
 {

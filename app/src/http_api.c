@@ -1,6 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "http_api.h"
-#include "include/doorMod.h"
+#include "doorMod.h"
 #include "hal/hub_udp.h"
 #include <stdio.h>
 #include <stdlib.h>
