@@ -72,7 +72,7 @@ static void *worker_fn(void *arg) {
 
         switch (t.type) {
             case LED_TASK_BLINK_RED:
-                LED_blink_red_n(t.flashes, t.freqHz, t.duty);
+                LED_blink_red_n(t.freqHz, t.duty);
                 break;
             case LED_TASK_HUB_SUCCESS:
                 LED_hub_command_success();

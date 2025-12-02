@@ -19,12 +19,12 @@ void LED_shutdown(void);
 
 // Low-level helpers
 // Set steady output on/off. `dutyPercent` is 0-100 (ignored if on==false).
-void LED_set_green_steady(bool on, int dutyPercent);
-void LED_set_red_steady(bool on, int dutyPercent);
+void LED_set_green_steady(int dutyPercent);
+void LED_set_red_steady(int dutyPercent);
 
 // Blink helpers (blocking): blink `flashes` times at `freqHz` with `dutyPercent`.
-void LED_blink_red_n(int flashes, int freqHz, int dutyPercent);
-void LED_blink_green_n(int flashes, int freqHz, int dutyPercent);
+void LED_blink_red_n(int freqHz, int dutyPercent);
+void LED_blink_green_n(int freqHz, int dutyPercent);
 
 // High-level sequences described in comments
 void LED_lock_success_sequence(void);
