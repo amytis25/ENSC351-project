@@ -143,14 +143,9 @@ sudo apt install libcurl4-openssl-dev:arm64
 - Used Port 8080
 ### Commands to input into 2 terminal
 First, in one terminal, python3 mockwebhook.py
-Then, in a second terminal, gcc app/src/discordTest.c \ 
-                            app/src/discord_alert.c \
-                            hal/src/system_webhook.c \
-                            hal/src/timing.c \
-                            -Iapp/include \
-                            -Ihal/include \
-                            -lcurl -lpthread \
-                            -o test_hub_webhook
+
+Then, in a second terminal, 
+gcc app/src/discordTest.c \ app/src/discord_alert.c \ hal/src/system_webhook.c \ hal/src/timing.c \ -Iapp/include \ -Ihal/include \ -lcurl -lpthread \ -o test_hub_webhook
 
 
 ## UDP/NETCAT INFORMATION
