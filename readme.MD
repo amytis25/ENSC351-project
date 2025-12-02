@@ -38,6 +38,12 @@ The central BeagleY-AI board will send updates to the user. <br>
     - Red - GPIO15
     - Green - GPIO12
 
+    Please edit overlays:
+
+    sudo nano /boot/firmware/extlinux/extlinux.conf
+    replace PWM overlay with 
+    - k3-am67a-beagley-ai-pwm-epwm0-gpio15-gpio12.dtbo
+
 ## RUNNING CMAKE
 - for host:
     ```shell
