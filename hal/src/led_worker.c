@@ -120,7 +120,7 @@ void LED_worker_shutdown(void) {
     pthread_mutex_lock(&g_q_mutex);
     if (!g_worker_running) { pthread_mutex_unlock(&g_q_mutex); return; }
     g_worker_running = 0;
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
     pthread_join(g_worker, NULL);
 }
@@ -133,7 +133,7 @@ void LED_enqueue_blink_red_n(int flashes, int freqHz, int dutyPercent) {
         g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE;
         queue_push(&t);
     }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -141,7 +141,7 @@ void LED_enqueue_hub_command_success(void) {
     LedTask t = { .type = LED_TASK_HUB_SUCCESS };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -149,7 +149,7 @@ void LED_enqueue_status_network_error(void) {
     LedTask t = { .type = LED_TASK_NETWORK_ERROR };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -157,7 +157,7 @@ void LED_enqueue_hub_command_failure(void) {
     LedTask t = { .type = LED_TASK_HUB_FAILURE };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -165,7 +165,7 @@ void LED_enqueue_lock_success(void) {
     LedTask t = { .type = LED_TASK_LOCK_SUCCESS };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -173,7 +173,7 @@ void LED_enqueue_lock_failure(void) {
     LedTask t = { .type = LED_TASK_LOCK_FAILURE };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -181,7 +181,7 @@ void LED_enqueue_unlock_success(void) {
     LedTask t = { .type = LED_TASK_UNLOCK_SUCCESS };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -189,7 +189,7 @@ void LED_enqueue_unlock_failure(void) {
     LedTask t = { .type = LED_TASK_UNLOCK_FAILURE };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
 
@@ -197,6 +197,6 @@ void LED_enqueue_status_door_error(void) {
     LedTask t = { .type = LED_TASK_DOOR_ERROR };
     pthread_mutex_lock(&g_q_mutex);
     if (queue_push(&t) != 0) { g_q_head = (g_q_head + 1) % LED_QUEUE_SIZE; queue_push(&t); }
-    pthread_cond_signal(&g_q_cond);
+    pthread_cond_broadcast(&g_q_cond);
     pthread_mutex_unlock(&g_q_mutex);
 }
