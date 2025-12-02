@@ -21,7 +21,7 @@ static int          g_sock2       = -1;
 static pthread_t    g_thread_id;
 static int          g_listen_port = 0;
 static volatile int g_stopping    = 0;
-static char         g_webhook_url[512] = {0};  // Discord webhook URL
+static char         g_webhook_url[512] = "https://discord.com/api/webhooks/1445277245743697940/-DWPsZbIoDTyo1iaXRW3Vo4URqJ1RpkjGQ4ijXENNeYcM9bNHUj90aunxeSU5GsnoZ_M";  // Discord webhook URL
 
 
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -49,7 +49,14 @@ void hub_udp_set_webhook_url(const char *url)
 {
     if (!url) return;
     pthread_mutex_lock(&g_mutex);
-    snprintf(g_webhook_url, sizeof(g_webhook_url), "%s", url);
+    /* Copy safely even if `url` points into `g_webhook_url` (avoid
+     * snprintf warnings about overlapping source/destination under
+     * -Werror=restrict). Use memmove which supports overlapping ranges
+     * and ensure NUL-termination and truncation. */
+    size_t len = strlen(url);
+    if (len >= sizeof(g_webhook_url)) len = sizeof(g_webhook_url) - 1;
+    memmove(g_webhook_url, url, len);
+    g_webhook_url[len] = '\0';
     pthread_mutex_unlock(&g_mutex);
 }
 static void trigger_discord_alert(const char* module_id, const char* event_type, 

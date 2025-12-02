@@ -39,7 +39,7 @@ typedef struct {
 
 int main(int argc, char *argv[]){
     const char *module_id = (argc > 1) ? argv[1] : "D1";
-    //const char *hub_ip    = (argc > 2) ? argv[2] : "192.168.8.108";
+    const char *hub_ip    = (argc > 2) ? argv[2] : "192.168.8.108";
     bool door_udp_running = false;
 
     // Removing door logic from system
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
         // indicate ready: low-duty green steady
         LED_set_green_steady(true, 30);
     }
-
+*/
     // Start door UDP client reporting (notifications -> 12345, heartbeats -> 12346)
     if (!door_udp_init2(hub_ip, 12345, 12346, module_id,
                        DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT,
@@ -62,7 +62,6 @@ int main(int argc, char *argv[]){
     } else {
         door_udp_running = true;
     }
-        */
 
     // Initialize Discord
     if (!discordStart()) {
@@ -185,7 +184,6 @@ int main(int argc, char *argv[]){
     // Stop HTTP API
     http_api_stop();
 
-    return 0;
 
     // ----------------------- END OF EG Door Control Loop -----------------------
     
