@@ -116,6 +116,8 @@ void LED_blink_green_n(int flashes, int freqHz, int dutyPercent)
 // High-level sequences
 void LED_lock_success_sequence(void)
 {
+	// Ensure green is off before starting sequence
+	PWM_disable(GREEN_LED);
 	// 2 red flashes @ 7Hz then green on steady (lower duty)
 	LED_blink_red_n(2, 7, 90);
 	LED_set_green_steady(true, 30);
@@ -123,26 +125,35 @@ void LED_lock_success_sequence(void)
 
 void LED_lock_failure_sequence(void)
 {
+	// Ensure green is off
+	PWM_disable(GREEN_LED);
 	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
 	LED_blink_red_n(5, 10, 90);
 	// slow red flash at 2Hz
 	if (!PWM_setFrequency(RED_LED, 2, 50)) {
 		PWM_disable(RED_LED);
 	}
-	// ensure green is off
-	PWM_disable(GREEN_LED);
 }
 
 void LED_unlock_success_sequence(void)
 {
-	// same as lock success
-	LED_lock_success_sequence();
+	// Ensure green is off before starting sequence
+	PWM_disable(GREEN_LED);
+	// 2 red flashes @ 7Hz then green on steady (lower duty)
+	LED_blink_red_n(2, 7, 90);
+	LED_set_green_steady(true, 30);
 }
 
 void LED_unlock_failure_sequence(void)
 {
-	// same as lock failure
-	LED_lock_failure_sequence();
+	// Ensure green is off
+	PWM_disable(GREEN_LED);
+	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
+	LED_blink_red_n(5, 10, 90);
+	// slow red flash at 2Hz
+	if (!PWM_setFrequency(RED_LED, 2, 50)) {
+		PWM_disable(RED_LED);
+	}
 }
 
 void LED_hub_command_success(void)

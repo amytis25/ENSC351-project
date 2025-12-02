@@ -70,59 +70,12 @@ static pthread_mutex_t __door_state_lock = PTHREAD_MUTEX_INITIALIZER;
 static Door_t __last_known_door = { .state = UNKNOWN };
 static long long __last_report_time_ms = 0;
 
-// Sensor polling thread
-static pthread_t __sensor_poll_thread;
-static int __sensor_poll_running = 0;
-static int __sensor_poll_interval_ms = 500;  // Poll every 500ms
-
 static void update_last_known_state(const Door_t *door)
 {
     pthread_mutex_lock(&__door_state_lock);
     if (door) __last_known_door = *door;
     __last_report_time_ms = getTimeInMs();
     pthread_mutex_unlock(&__door_state_lock);
-}
-
-static void *sensor_poll_worker(void *arg)
-{
-    (void)arg;
-    fprintf(stderr, "[sensor_poll_worker] Sensor polling thread started - checking door/lock state every %dms\n", __sensor_poll_interval_ms);
-    
-    while (__sensor_poll_running) {
-        sleepForMs(__sensor_poll_interval_ms);
-        
-        // Read current hardware state
-        long long distance = get_distance();
-        uint16_t stepper_pos = StepperMotor_GetPosition();
-        
-        // Map to door state
-        bool d0_open = (distance >= 10);  // Door open if distance >= 10cm
-        bool d1_locked = (stepper_pos == 180);  // Lock is locked at 180 degrees
-        
-        // Update the last known state for heartbeat thread
-        Door_t current_state;
-        current_state.state = UNKNOWN;
-        
-        if (distance == -1) {
-            current_state.state = UNKNOWN;  // Sensor error
-        } else if (d0_open) {
-            current_state.state = OPEN;
-        } else if (d1_locked) {
-            current_state.state = LOCKED;
-        } else {
-            current_state.state = UNLOCKED;
-        }
-        
-        update_last_known_state(&current_state);
-        
-        // Call HAL to report state change if any
-        // D0 = door open/close, D1 = lock state
-        bool d0_locked = false;  // unused
-        bool d1_open = false;    // unused
-        door_udp_update(d0_open, d0_locked, d1_open, d1_locked);
-    }
-    
-    return NULL;
 }
 
 static void *heartbeat_worker(void *arg)
@@ -191,13 +144,6 @@ bool door_reporting_start(const char *hub_ip, uint16_t report_port, uint16_t hea
     __last_report_time_ms = getTimeInMs();
     pthread_mutex_unlock(&__door_state_lock);
 
-    // Start sensor polling thread to detect door open/close changes
-    __sensor_poll_running = 1;
-    if (pthread_create(&__sensor_poll_thread, NULL, sensor_poll_worker, NULL) != 0) {
-        fprintf(stderr, "[door_reporting_start] WARNING: Failed to create sensor poll thread\n");
-        __sensor_poll_running = 0;
-    }
-
     return true;
 }
 
@@ -206,10 +152,6 @@ void door_reporting_stop(void)
     // stop heartbeat
     __heartbeat_running = 0;
     pthread_join(__heartbeat_thread, NULL);
-    
-    // stop sensor polling
-    __sensor_poll_running = 0;
-    pthread_join(__sensor_poll_thread, NULL);
     
     if (__report_module_id) {
         free(__report_module_id);
