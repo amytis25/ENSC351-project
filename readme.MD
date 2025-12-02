@@ -181,7 +181,6 @@ scp doorMod_cli simon@192.168.8.238:
 scp doorMod_cli <RICHARD_USER>@192.168.8.233:
 
 
-
 add to PROFILE of each beagle:
 sudo ./doorMod_cli [MODULE_ID]
 
