@@ -4,9 +4,75 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <net/if.h>
 
 #include "discord_alert.h"
 #include "hal/timing.h"
+
+/* Device binding for Discord webhook traffic (optional) */
+static char g_discord_device[IFNAMSIZ] = {0};
+static pthread_mutex_t g_discord_device_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* Socket creation callback for curl to bind to a specific interface */
+static curl_socket_t socket_callback_bind_device(void *clientp, curlsocktype purpose,
+                                          struct curl_sockaddr *address)
+{
+    (void)purpose;
+    (void)clientp;
+
+    /* Null check - address should always be valid, but safer to check */
+    if (!address) {
+        fprintf(stderr, "Discord: socket_callback_bind_device called with NULL address\n");
+        return CURL_SOCKET_BAD;
+    }
+
+    /* Create the socket normally */
+    curl_socket_t sock = socket(address->family, address->socktype, address->protocol);
+    if (sock == CURL_SOCKET_BAD) {
+        return CURL_SOCKET_BAD;
+    }
+
+    /* Apply device binding if configured */
+    pthread_mutex_lock(&g_discord_device_lock);
+    if (g_discord_device[0] != '\0') {
+        if (setsockopt((int)sock, SOL_SOCKET, SO_BINDTODEVICE, g_discord_device, 
+                       strlen(g_discord_device) + 1) != 0) {
+            fprintf(stderr, "Discord: Failed to bind socket to device '%s'\n", g_discord_device);
+            close((int)sock);
+            pthread_mutex_unlock(&g_discord_device_lock);
+            return CURL_SOCKET_BAD;
+        } else {
+            fprintf(stderr, "Discord: Socket bound to device '%s'\n", g_discord_device);
+        }
+    }
+    pthread_mutex_unlock(&g_discord_device_lock);
+
+    return sock;
+}
+
+/**
+ * Set the network device to bind Discord webhook traffic to.
+ * Pass NULL or empty string to use any interface (default).
+ * Requires CAP_NET_RAW capability.
+ */
+void discord_set_device(const char *device)
+{
+    pthread_mutex_lock(&g_discord_device_lock);
+    if (!device || device[0] == '\0') {
+        g_discord_device[0] = '\0';
+    } else {
+        size_t len = strlen(device);
+        if (len >= IFNAMSIZ) {
+            fprintf(stderr, "Discord: device name '%s' too long\n", device);
+        } else {
+            strncpy(g_discord_device, device, IFNAMSIZ - 1);
+            g_discord_device[IFNAMSIZ - 1] = '\0';
+        }
+    }
+    pthread_mutex_unlock(&g_discord_device_lock);
+}
 
 // Discord Alert sending handling using libcurl
 bool discordStart(void){
@@ -36,6 +102,9 @@ void sendDiscordAlert(const char *webhook_url, const char *msg)
     curl_easy_setopt(curl, CURLOPT_URL, webhook_url);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+    
+    /* Set socket creation callback to bind to wlan0 if configured */
+    curl_easy_setopt(curl, CURLOPT_OPENSOCKETFUNCTION, socket_callback_bind_device);
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {

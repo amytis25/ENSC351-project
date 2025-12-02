@@ -16,6 +16,15 @@ bool discordStart(void);
 void discordCleanup(void);
 void sendDiscordAlert(const char *webhookURL, const char *msg);
 
+/**
+ * Bind Discord webhook traffic to a specific network device.
+ * Pass NULL or empty string to use any available interface (default).
+ * Requires CAP_NET_RAW capability.
+ * 
+ * @param device  Device name (e.g., "wlan0", "eth0"), or NULL
+ */
+void discord_set_device(const char *device);
+
 bool startDoorAlertMonitor(AlertMsgProvider provider, void *ctx, const char *webhook_url);
 void stopDoorAlertMonitor(void);
 
