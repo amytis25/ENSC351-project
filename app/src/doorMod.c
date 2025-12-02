@@ -89,19 +89,18 @@ static void *heartbeat_worker(void *arg)
     while (__heartbeat_running) {
         sleepForMs(__heartbeat_interval_ms);
         
-        // Get current door state and call HAL to trigger heartbeat/notifications
-        pthread_mutex_lock(&__door_state_lock);
-        Door_t s = __last_known_door;
-        pthread_mutex_unlock(&__door_state_lock);
+        // Read current hardware state directly (don't rely on stale cached state)
+        long long distance = get_distance();
+        uint16_t stepper_pos = StepperMotor_GetPosition();
         
-        // Call HAL's update function to check if heartbeat should be sent
-        // Map Door_t state to UDP booleans:
-        // D0 = door open/close, D1 = lock state
-        bool d0_open = (s.state == OPEN);
-        bool d0_locked = false;  // unused
-        bool d1_open = false;    // unused
-        bool d1_locked = (s.state == LOCKED);
+        // Map to UDP booleans:
+        // D0 = door open/close (from ultrasonic), D1 = lock state (from stepper)
+        bool d0_open = (distance >= 10);      // Door open if distance >= 10cm
+        bool d0_locked = false;               // unused
+        bool d1_open = false;                 // unused
+        bool d1_locked = (stepper_pos == 180); // Lock is locked at 180 degrees
         
+        // Call HAL's update function to send heartbeat/notifications
         door_udp_update(d0_open, d0_locked, d1_open, d1_locked);
     }
     

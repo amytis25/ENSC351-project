@@ -45,14 +45,21 @@ static void blink_led(LEDt led, int flashes, int freqHz, int dutyPercent)
 {
 	if (flashes <= 0 || freqHz <= 0) return;
 
-	// Enable PWM at requested frequency and duty
-	if (!PWM_setFrequency(led, freqHz, dutyPercent)) return;
+	fprintf(stderr, "[blink_led] Starting: %d flashes @ %dHz, duty=%d%%\n", flashes, freqHz, dutyPercent);
 
-	// total time = flashes * period
+	// Enable PWM at requested frequency and duty
+	if (!PWM_setFrequency(led, freqHz, dutyPercent)) {
+		fprintf(stderr, "[blink_led] PWM_setFrequency failed\n");
+		return;
+	}
+
+	// total time = flashes * period (each period is one on/off cycle)
 	int period_ms = 1000 / freqHz;
 	int total_ms = period_ms * flashes;
+	fprintf(stderr, "[blink_led] Sleeping for %dms (period=%dms)\n", total_ms, period_ms);
 	sleepForMs(total_ms);
 
+	fprintf(stderr, "[blink_led] Disabling LED\n");
 	// turn off
 	PWM_disable(led);
 }
