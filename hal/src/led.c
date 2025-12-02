@@ -135,7 +135,7 @@ void LED_lock_success_sequence(void)
 	PWM_disable(GREEN_LED);
 	// 2 red flashes @ 7Hz then green on steady (lower duty)
 	LED_blink_red_n( 7, 90);
-	LED_set_green_steady(30);
+	LED_set_red_steady(30);
 }
 
 void LED_lock_failure_sequence(void)
@@ -145,12 +145,15 @@ void LED_lock_failure_sequence(void)
 	#endif
 	// Ensure green is off
 	PWM_disable(GREEN_LED);
+	PWM_disable(RED_LED);
 	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
 	LED_blink_red_n(10, 90);
 	// slow red flash at 2Hz
 	if (!PWM_setFrequency(RED_LED, 2, 50)) {
 		PWM_disable(RED_LED);
 	}
+	PWM_disable(RED_LED);
+	PWM_disable(GREEN_LED);
 }
 
 void LED_unlock_success_sequence(void)
@@ -160,6 +163,7 @@ void LED_unlock_success_sequence(void)
 	#endif
 	// Ensure green is off before starting sequence
 	PWM_disable(GREEN_LED);
+	PWM_disable(RED_LED);
 	// 2 red flashes @ 7Hz then green on steady (lower duty)
 	LED_blink_red_n(7, 90);
 	LED_set_green_steady(30);
@@ -172,18 +176,21 @@ void LED_unlock_failure_sequence(void)
 	#endif
 	// Ensure green is off
 	PWM_disable(GREEN_LED);
+	PWM_disable(RED_LED);
 	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
 	LED_blink_red_n(10, 90);
 	// slow red flash at 2Hz
 	if (!PWM_setFrequency(RED_LED, 2, 50)) {
 		PWM_disable(RED_LED);
 	}
+	PWM_disable(RED_LED);
+	PWM_disable(GREEN_LED);
 }
 
 void LED_hub_command_success(void)
 {
 	// 2 red flashes @ 7Hz
-	LED_blink_red_n(7, 90);
+	LED_set_green_steady(50);
 }
 
 void LED_hub_command_failure(void)
