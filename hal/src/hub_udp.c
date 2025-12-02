@@ -178,7 +178,6 @@ static void handle_line(char *line, struct sockaddr_in *src)
         /* nothing */
     }
     if (!type) return;
-    if (!type) return;
 
     HubDoorStatus *door = NULL;
 

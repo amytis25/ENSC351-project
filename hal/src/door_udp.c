@@ -260,20 +260,20 @@ bool door_udp_init2(const char *host_ip, uint16_t notif_port, uint16_t hb_port,
     }
     fprintf(stderr, "[door_udp_init2] Destination addresses set: %s:%u (notif) and %s:%u (hb)\n", host_ip, notif_port, host_ip, hb_port);
 
-    // Bind local socket to notif_port so it can receive commands
+    // Bind local socket to ephemeral port so it can receive commands
     struct sockaddr_in local;
     memset(&local, 0, sizeof(local));
     local.sin_family = AF_INET;
-    local.sin_port = htons(notif_port);
+    local.sin_port = htons(0);  // Let OS assign an ephemeral port (avoids conflict with hub listening on notif_port)
     local.sin_addr.s_addr = htonl(INADDR_ANY);
-    fprintf(stderr, "[door_udp_init2] Binding to port %u on INADDR_ANY...\n", notif_port);
+    fprintf(stderr, "[door_udp_init2] Binding to ephemeral port on INADDR_ANY...\n");
     if (bind(s, (struct sockaddr *)&local, sizeof(local)) < 0) {
         perror("[door_udp_init2] bind FAILED");
-        fprintf(stderr, "[door_udp_init2] ERROR: Cannot bind to port %u (already in use?)\n", notif_port);
+        fprintf(stderr, "[door_udp_init2] ERROR: Cannot bind local socket\n");
         close(s);
         return false;
     }
-    fprintf(stderr, "[door_udp_init2] Successfully bound to port %u\n", notif_port);
+    fprintf(stderr, "[door_udp_init2] Successfully bound to ephemeral port\n");
 
     g_sock = s;
     g_dest_len = sizeof(g_dest_notif);
