@@ -39,9 +39,11 @@ typedef struct {
 
 int main(int argc, char *argv[]){
     const char *module_id = (argc > 1) ? argv[1] : "D1";
-    const char *hub_ip    = (argc > 2) ? argv[2] : "192.168.7.10";
+    //const char *hub_ip    = (argc > 2) ? argv[2] : "192.168.8.108";
     bool door_udp_running = false;
 
+    // Removing door logic from system
+    /*
     if (!initializeDoorSystem ()){
         printf("System initialization failed. Exiting.\n");
         LED_enqueue_status_door_error();
@@ -60,12 +62,14 @@ int main(int argc, char *argv[]){
     } else {
         door_udp_running = true;
     }
+        */
+
     // Initialize Discord
     if (!discordStart()) {
         fprintf(stderr, "Failed to initialize Discord\n");
         return 1;
     }
-    hub_udp_set_webhook_url("https://discord.com/api/webhooks/1444219627461673080/rrr5SoaN1RpNC_PGoIH_mFWFV8fB4PosUd6qGC24M3zfg6nsDnvXAhyTxtr5qDiZOJy2");
+    hub_udp_set_webhook_url("https://discord.com/api/webhooks/1445277245743697940/-DWPsZbIoDTyo1iaXRW3Vo4URqJ1RpkjGQ4ijXENNeYcM9bNHUj90aunxeSU5GsnoZ_M");
 
         // Start webhook reporter if provided via argv[3] or environment
         const char *webhook_url = (argc > 3) ? argv[3] : getenv("HUB_WEBHOOK_URL");

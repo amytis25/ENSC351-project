@@ -38,6 +38,12 @@ The central BeagleY-AI board will send updates to the user. <br>
     - Red - GPIO15
     - Green - GPIO12
 
+    Please edit overlays:
+
+    sudo nano /boot/firmware/extlinux/extlinux.conf
+    replace PWM overlay with 
+    - k3-am67a-beagley-ai-pwm-epwm0-gpio15-gpio12.dtbo
+
 ## RUNNING CMAKE
 - for host:
     ```shell
@@ -131,6 +137,16 @@ sudo apt update
 
 sudo apt install libcurl4-openssl-dev:arm64
 
+## Discord webhook testing information:
+
+### Port:
+- Used Port 8080
+### Commands to input into 2 terminal
+First, in one terminal, python3 mockwebhook.py
+
+Then, in a second terminal, 
+gcc app/src/discordTest.c \ app/src/discord_alert.c \ hal/src/system_webhook.c \ hal/src/timing.c \ -Iapp/include \ -Ihal/include \ -lcurl -lpthread \ -o test_hub_webhook
+
 
 ## UDP/NETCAT INFORMATION
 ### UDP ports used:
@@ -181,7 +197,6 @@ scp door_system melissa@192.168.8.108:
 scp doorMod_cli amytis@192.168.8.213:
 scp doorMod_cli simon@192.168.8.238:
 scp doorMod_cli <RICHARD_USER>@192.168.8.233:
-
 
 
 add to PROFILE of each beagle:
