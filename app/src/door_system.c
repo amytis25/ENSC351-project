@@ -78,6 +78,10 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Failed to initialize Discord\n");
         return 1;
     }
+    
+    /* Bind Discord webhook traffic to wlan0 interface */
+    discord_set_device("wlan0");
+    
     hub_udp_set_webhook_url("https://discord.com/api/webhooks/1445277245743697940/-DWPsZbIoDTyo1iaXRW3Vo4URqJ1RpkjGQ4ijXENNeYcM9bNHUj90aunxeSU5GsnoZ_M");
 
         // Start webhook reporter if provided via argv[3] or environment
