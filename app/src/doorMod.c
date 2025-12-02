@@ -113,6 +113,13 @@ bool door_reporting_start(const char *hub_ip, uint16_t report_port, uint16_t hea
     fprintf(stderr, "[door_reporting_start] Called with module_id='%s'\n", module_id);
     if (!hub_ip || !module_id) return false;
 
+    // Register the app-level command handler BEFORE starting UDP
+    // This ensures COMMAND messages are properly processed and responded to
+    extern bool app_udp_handler_init(void);
+    if (!app_udp_handler_init()) {
+        fprintf(stderr, "[door_reporting_start] Warning: app_udp_handler_init failed\n");
+    }
+
     // Start notification + heartbeat reporting using HAL helper
     // Enable BOTH modes so the HAL sends notifications on state change AND periodic heartbeats
     int mode = DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT;

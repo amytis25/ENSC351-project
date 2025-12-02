@@ -47,17 +47,21 @@ bool StepperMotor_Rotate(int target_degrees) {
         return false;
     }
 
-    // Calculate the exact number of motor steps we need to move.
-    // Use rounding to avoid cumulative truncation: steps = round(deg * STEPS_PER_REV / 360)
-    int total_steps = (int)((target_degrees * (long)STEPS_PER_REV + 180) / 360);
+    // Calculate target position in steps
+    int target_step_position = (int)((target_degrees * (long)STEPS_PER_REV + 180) / 360);
+    
+    // Calculate steps needed to reach target by rotating forward only
+    // Use modulo arithmetic to handle wraparound
+    int steps_needed = (target_step_position - current_step_position + STEPS_PER_REV) % STEPS_PER_REV;
+    
     int current_step = 0;
     int sequence_index = 0;
 
-    printf("Rotating motor to %d degrees...\n", 
-        target_degrees);
+    printf("Rotating motor to %d degrees (from current %d, need %d steps)...\n", 
+        target_degrees, StepperMotor_GetPosition(), steps_needed);
 
-    // Perform rotation forward by total_steps
-    while (current_step < total_steps) {
+    // Perform rotation forward only
+    while (current_step < steps_needed) {
         // Set the current step pattern
         if (!set_motor_pins(halfstep_sequence[sequence_index])) {
             printf("Failed to set motor pins at step %d\n", current_step);
@@ -68,9 +72,8 @@ bool StepperMotor_Rotate(int target_degrees) {
         sequence_index = (sequence_index + 1) % 8;
         current_step++;
 
-
-    // Update position in steps. We add one motor step per iteration.
-    current_step_position = (current_step_position + 1) % STEPS_PER_REV;
+        // Update position in steps
+        current_step_position = (current_step_position + 1) % STEPS_PER_REV;
 
         // Small delay between steps (adjust for speed)
         sleepForMs(2);
