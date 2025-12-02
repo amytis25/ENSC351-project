@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 199309L
 #include "hal/timing.h"
 #include <stdio.h> // fopen, fprintf, fclose, perror
 #include <stdlib.h>  // exit, EXIT_FAILURE, EXIT_SUCCESS
