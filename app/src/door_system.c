@@ -39,7 +39,7 @@ typedef struct {
 
 int main(int argc, char *argv[]){
     const char *module_id = (argc > 1) ? argv[1] : "D1";
-    const char *hub_ip    = (argc > 2) ? argv[2] : "192.168.8.108";
+    //const char *hub_ip    = (argc > 2) ? argv[2] : "192.168.8.108";
     bool door_udp_running = false;
 
     // Removing door logic from system
@@ -54,6 +54,15 @@ int main(int argc, char *argv[]){
         LED_set_green_steady(true, 30);
     }
 */
+    /*
+     * NOTE: the hub binds UDP ports 12345/12346 for listening. Calling
+     * `door_udp_init2()` here makes this process also bind the notification
+     * port (12345) which conflicts with the hub listener when running in
+     * the same process/host. Disable module-side reporting here — if you
+     * want this binary to act as a module, run the module-specific binary
+     * (`doorMod_cli`) instead or enable this code conditionally.
+     */
+#if 0
     // Start door UDP client reporting (notifications -> 12345, heartbeats -> 12346)
     if (!door_udp_init2(hub_ip, 12345, 12346, module_id,
                        DOOR_REPORT_NOTIFICATION | DOOR_REPORT_HEARTBEAT,
@@ -62,6 +71,7 @@ int main(int argc, char *argv[]){
     } else {
         door_udp_running = true;
     }
+#endif
 
     // Initialize Discord
     if (!discordStart()) {
@@ -111,6 +121,12 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
+    fprintf(stderr, "========== Hub startup ==========\n");
+    fprintf(stderr, "UDP listener initialized successfully\n");
+    fprintf(stderr, "Listening on port 12345 (HELLO/notifications/FEEDBACKs)\n");
+    fprintf(stderr, "Listening on port 12346 (heartbeats)\n");
+    fprintf(stderr, "Waiting for module connections...\n");
+    fprintf(stderr, "=================================\n\n");
     printf("Hub listening on UDP ports 12345 (commands/alerts) and 12346 (heartbeats)...\n");
     // -------------------------EG door control loop ------------------------
 

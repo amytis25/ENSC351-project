@@ -30,6 +30,12 @@ int main(int argc, char *argv[])
     const char *hub_ip    = "192.168.8.108";
     bool reporting_running = false;
 
+    fprintf(stderr, "========== doorMod_cli startup ==========\n");
+    fprintf(stderr, "Module ID: %s\n", module_id);
+    fprintf(stderr, "Hub IP: %s\n", hub_ip);
+    fprintf(stderr, "Expected hub ports: 12345 (commands/notifications), 12346 (heartbeats)\n");
+    fprintf(stderr, "========================================\n\n");
+
     // ---- Hardware / app init ----
     if (!initializeDoorSystem()) {
         fprintf(stderr, "Failed to initialize door system\n");
@@ -53,10 +59,21 @@ int main(int argc, char *argv[])
 
     // ---- Start UDP reporting (notifications + heartbeat) ----
     if (!door_reporting_start(hub_ip, 12345, 12346, module_id, 1000)) {
-        fprintf(stderr,
-                "WARNING: reporting init failed; continuing without UDP reporting\n");
+        fprintf(stderr, "\n");
+        fprintf(stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        fprintf(stderr, "ERROR: UDP reporting failed to start!\n");
+        fprintf(stderr, "Check that:\n");
+        fprintf(stderr, "  1. Hub IP (%s) is correct\n", hub_ip);
+        fprintf(stderr, "  2. Hub is running and listening on ports 12345/12346\n");
+        fprintf(stderr, "  3. Network connectivity exists\n");
+        fprintf(stderr, "  4. No other process is already bound to port 12345\n");
+        fprintf(stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
         LED_status_network_error();   // immediate pattern (not queued)
     } else {
+        fprintf(stderr, "✓ UDP reporting initialized successfully\n");
+        fprintf(stderr, "  - Bound to local port 12345 (listening for COMMANDs)\n");
+        fprintf(stderr, "  - Sending notifications to %s:12345\n", hub_ip);
+        fprintf(stderr, "  - Sending heartbeats to %s:12346\n\n", hub_ip);
         reporting_running = true;
     }
 

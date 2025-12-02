@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <hal/DiscordAlert.h>
 
+#define HUB_OFFLINE_TIMEOUT_MS 10000  // 10 seconds without heartbeat = offline
+
 static int          g_sock        = -1;
 static int          g_sock2       = -1;
 static pthread_t    g_thread_id;
@@ -291,9 +293,47 @@ static void handle_line(char *line, struct sockaddr_in *src)
 
 // ---------- receiver thread ----------
 
+static void check_offline_modules(void)
+{
+    long long now = now_ms();
+    
+    pthread_mutex_lock(&g_mutex);
+    for (int i = 0; i < HUB_MAX_DOORS; i++) {
+        if (!g_doors[i].known) continue;
+        
+        bool should_be_offline = (now - g_doors[i].last_heartbeat_ms) > HUB_OFFLINE_TIMEOUT_MS;
+        
+        if (should_be_offline && !g_doors[i].offline) {
+            // Module just went offline
+            fprintf(stderr, "[hub_offline_check] Module %s went OFFLINE (no heartbeat for %lld ms)\n",
+                    g_doors[i].module_id, now - g_doors[i].last_heartbeat_ms);
+            g_doors[i].offline = true;
+            g_doors[i].last_online_ms = now;
+            
+            // Send OFFLINE alert
+            char event[256];
+            snprintf(event, sizeof(event), "%s EVENT SYSTEM OFFLINE\n", g_doors[i].module_id);
+            add_history(g_doors[i].module_id, event, now);
+            trigger_discord_alert(g_doors[i].module_id, "SYSTEM", "MODULE", "OFFLINE");
+        } else if (!should_be_offline && g_doors[i].offline) {
+            // Module came back online
+            fprintf(stderr, "[hub_offline_check] Module %s came back ONLINE\n", g_doors[i].module_id);
+            g_doors[i].offline = false;
+            
+            // Send ONLINE alert
+            char event[256];
+            snprintf(event, sizeof(event), "%s EVENT SYSTEM ONLINE\n", g_doors[i].module_id);
+            add_history(g_doors[i].module_id, event, now);
+            trigger_discord_alert(g_doors[i].module_id, "SYSTEM", "MODULE", "ONLINE");
+        }
+    }
+    pthread_mutex_unlock(&g_mutex);
+}
+
 static void *udp_thread(void *arg)
 {
     (void)arg;
+    fprintf(stderr, "[hub_udp_thread] Listener thread started, waiting for incoming datagrams...\n");
 
     struct sockaddr_in src;
     socklen_t src_len = sizeof(src);
@@ -307,7 +347,7 @@ static void *udp_thread(void *arg)
         if (g_sock2 >= 0) { FD_SET(g_sock2, &rfds); if (g_sock2 > maxfd) maxfd = g_sock2; }
 
         struct timeval tv;
-        tv.tv_sec = 0; tv.tv_usec = 500000; // 500 ms
+        tv.tv_sec = 1; tv.tv_usec = 0; // 1 second timeout to periodically check offline status
         int r = select(maxfd + 1, &rfds, NULL, NULL, &tv);
         if (r < 0) {
             if (errno == EINTR) continue;
@@ -315,7 +355,9 @@ static void *udp_thread(void *arg)
             sleepForMs(1);
             continue;
         } else if (r == 0) {
-            continue; // timeout
+            // timeout - check for offline modules
+            check_offline_modules();
+            continue;
         }
 
         int fd = -1;
@@ -340,10 +382,16 @@ static void *udp_thread(void *arg)
             }
             if (n == 0) break;
             buf[n] = '\0';
+            char src_ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &src.sin_addr, src_ip, INET_ADDRSTRLEN);
+            fprintf(stderr, "[hub_udp_thread] RECEIVED: %zd bytes from %s:%u on fd=%d: '%s'\n", n, src_ip, ntohs(src.sin_port), fd, buf);
             // We modify buf during parsing, so pass the source address
             handle_line(buf, &src);
             // continue to drain any additional queued datagrams
         }
+        
+        // After processing packets, check for offline modules
+        check_offline_modules();
     }
 
     return NULL;
@@ -353,6 +401,7 @@ static void *udp_thread(void *arg)
 
 bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2)
 {
+    fprintf(stderr, "[hub_udp_init] START: listen_port1=%u, listen_port2=%u\n", listen_port1, listen_port2);
     if (g_sock >= 0 || g_sock2 >= 0) {
         fprintf(stderr, "hub_udp_init: already initialized\n");
         return false;
@@ -362,9 +411,11 @@ bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2)
 
     int s1 = socket(AF_INET, SOCK_DGRAM, 0);
     if (s1 < 0) {
-        perror("hub_udp: socket");
+        perror("[hub_udp_init] socket");
+        fprintf(stderr, "[hub_udp_init] ERROR: Cannot create socket for port1\n");
         return false;
     }
+    fprintf(stderr, "[hub_udp_init] Socket 1 created: fd=%d\n", s1);
 
     struct sockaddr_in addr1;
     memset(&addr1, 0, sizeof(addr1));
@@ -372,34 +423,42 @@ bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2)
     addr1.sin_port        = htons(listen_port1);
     addr1.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    fprintf(stderr, "[hub_udp_init] Binding port1 (%u)...\n", listen_port1);
     if (bind(s1, (struct sockaddr *)&addr1, sizeof(addr1)) < 0) {
-        perror("hub_udp: bind port1");
+        perror("[hub_udp_init] bind port1");
+        fprintf(stderr, "[hub_udp_init] ERROR: Cannot bind port1 %u (already in use?)\n", listen_port1);
         close(s1);
         return false;
     }
+    fprintf(stderr, "[hub_udp_init] Port1 (%u) bound successfully\n", listen_port1);
 
     g_sock = s1;
 
     if (listen_port2 != 0) {
         int s2 = socket(AF_INET, SOCK_DGRAM, 0);
         if (s2 < 0) {
-            perror("hub_udp: socket2");
+            perror("[hub_udp_init] socket2");
+            fprintf(stderr, "[hub_udp_init] ERROR: Cannot create socket for port2\n");
             close(g_sock);
             g_sock = -1;
             return false;
         }
+        fprintf(stderr, "[hub_udp_init] Socket 2 created: fd=%d\n", s2);
         struct sockaddr_in addr2;
         memset(&addr2, 0, sizeof(addr2));
         addr2.sin_family      = AF_INET;
         addr2.sin_port        = htons(listen_port2);
         addr2.sin_addr.s_addr = htonl(INADDR_ANY);
+        fprintf(stderr, "[hub_udp_init] Binding port2 (%u)...\n", listen_port2);
         if (bind(s2, (struct sockaddr *)&addr2, sizeof(addr2)) < 0) {
-            perror("hub_udp: bind port2");
+            perror("[hub_udp_init] bind port2");
+            fprintf(stderr, "[hub_udp_init] ERROR: Cannot bind port2 %u (already in use?)\n", listen_port2);
             close(s2);
             close(g_sock);
             g_sock = -1;
             return false;
         }
+        fprintf(stderr, "[hub_udp_init] Port2 (%u) bound successfully\n", listen_port2);
         g_sock2 = s2;
     }
 
@@ -413,13 +472,17 @@ bool hub_udp_init(uint16_t listen_port1, uint16_t listen_port2)
     g_hist_count = 0;
     pthread_mutex_unlock(&g_mutex);
 
+    fprintf(stderr, "[hub_udp_init] Creating listener thread...\n");
     if (pthread_create(&g_thread_id, NULL, udp_thread, NULL) != 0) {
-        perror("hub_udp: pthread_create");
+        perror("[hub_udp_init] pthread_create");
+        fprintf(stderr, "[hub_udp_init] ERROR: Failed to create listener thread\n");
         if (g_sock2 >= 0) close(g_sock2);
         if (g_sock >= 0) close(g_sock);
         g_sock = -1; g_sock2 = -1;
         return false;
     }
+    fprintf(stderr, "[hub_udp_init] Listener thread created successfully\n");
+    fprintf(stderr, "[hub_udp_init] HUB INIT COMPLETE: listening on ports %u and %u\n", listen_port1, listen_port2);
 
     /* LED worker is started by LED_init() to guarantee proper ordering
      * with hardware initialization. */

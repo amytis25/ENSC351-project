@@ -15,6 +15,7 @@
 typedef struct {
     char module_id[HUB_MODULE_ID_LEN];   // e.g., "D1"
     bool known;
+    bool offline;  // true if heartbeat not received for > 10 seconds
 
     bool d0_open;
     bool d0_locked;
@@ -23,6 +24,7 @@ typedef struct {
 
     long long last_heartbeat_ms;
     long long last_event_ms;
+    long long last_online_ms;  // timestamp when module went offline (or 0 if online)
 
     char last_heartbeat_line[HUB_LINE_LEN];
     // Last known source address for this module (useful for forwarding commands)
