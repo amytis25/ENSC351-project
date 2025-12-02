@@ -248,13 +248,33 @@ Door_t unlockDoor (Door_t *door){
         printf("Door is already unlocked.\n");
     } else {
         long long distance = get_distance();
-        if (distance >= 5) {
+
+        /* If our last-known state indicates the door was previously locked
+           (for example from a recent heartbeat or event), allow unlocking
+           without re-checking the ultrasonic sensor. This helps when the
+           sensor is noisy or briefly unreliable right after a lock change. */
+        pthread_mutex_lock(&__door_state_lock);
+        bool last_was_locked = (__last_known_door.state == LOCKED);
+        pthread_mutex_unlock(&__door_state_lock);
+
+        if (last_was_locked || StepperMotor_GetPosition() == 180) {
+            // Attempt unlock without checking distance
+            if (StepperMotor_Rotate(180)) {
+                printf("Door unlocked successfully.\n");
+                door->state = UNLOCKED;
+                LED_enqueue_unlock_success();
+            } else {
+                printf("Failed to unlock the door.\n");
+                LED_enqueue_unlock_failure();
+            }
+        }
+        else if (distance >= 5) {
             printf("Door is open, cannot unlock.\n");
             door->state = OPEN;
             LED_enqueue_unlock_failure();
         }
-        else if (StepperMotor_Rotate(180)) {
-            printf("Door unlocked successfully.\n");
+        else if (!last_was_locked) {
+            printf("Door is already unlocked.\n");
             // Update door state
             door->state = UNLOCKED;
             LED_enqueue_unlock_success();
