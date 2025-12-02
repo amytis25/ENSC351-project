@@ -205,7 +205,7 @@ Door_t lockDoor (Door_t *door){
     if (StepperMotor_GetPosition() == 180){
         printf("Door is already locked.\n");
     } else {
-        if (dist >= DOOR_CLOSED_THRESHOLD_CM){ {
+        if (dist >= DOOR_CLOSED_THRESHOLD_CM) {
             printf("Door is open, cannot lock.\n");
             door->state = OPEN;
             LED_enqueue_lock_failure();

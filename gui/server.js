@@ -10,7 +10,7 @@ const path = require('path');
 const mime = require('mime');
 const http = require('http');
 
-const PORT = 8080;
+const PORT = 3000;
 
 // HTTP server for serving static files
 const httpServer = http.createServer(function(req, res) {
