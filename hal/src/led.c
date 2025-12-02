@@ -101,28 +101,42 @@ void LED_set_red_steady(int dutyPercent)
 }
 
 // Blink helpers (blocking)
-void LED_blink_red_n(int freqHz, int dutyPercent)
+void LED_blink_red_n(int flashes, int freqHz, int dutyPercent)
 {	
-	long long startTime = getTimeInMs();
+	if (flashes <= 0 || freqHz <= 0) return;
+
+	// Enable PWM at requested frequency and duty
 	if (!PWM_setFrequency(RED_LED, freqHz, dutyPercent)) {
 		fprintf(stderr, "LED_blink_red_n: failed to set PWM for %s\n", LED_RED_PIN);
+		return;
 	}
-	if (startTime - getTimeInMs()>100){
-		PWM_disable(RED_LED);
-	}
-	return;
+
+	// total time = flashes * period
+	int period_ms = 1000 / freqHz;
+	int total_ms = period_ms * flashes;
+	sleepForMs(total_ms);
+
+	// turn off
+	PWM_disable(RED_LED);
 }
 
-void LED_blink_green_n(int freqHz, int dutyPercent)
+void LED_blink_green_n(int flashes, int freqHz, int dutyPercent)
 {
-	long long startTime = getTimeInMs();
+	if (flashes <= 0 || freqHz <= 0) return;
+
+	// Enable PWM at requested frequency and duty
 	if (!PWM_setFrequency(GREEN_LED, freqHz, dutyPercent)) {
 		fprintf(stderr, "LED_blink_green_n: failed to set PWM for %s\n", LED_GREEN_PIN);
+		return;
 	}
-	if (startTime - getTimeInMs()>100){
-		PWM_disable(RED_LED);
-	}
-	return;
+
+	// total time = flashes * period
+	int period_ms = 1000 / freqHz;
+	int total_ms = period_ms * flashes;
+	sleepForMs(total_ms);
+
+	// turn off
+	PWM_disable(GREEN_LED);
 }
 
 // High-level sequences
@@ -134,8 +148,8 @@ void LED_lock_success_sequence(void)
 	// Ensure green is off before starting sequence
 	PWM_disable(GREEN_LED);
 	// 2 red flashes @ 7Hz then green on steady (lower duty)
-	LED_blink_red_n( 7, 90);
-	LED_set_red_steady(30);
+	LED_blink_red_n(2, 7, 90);
+	LED_set_green_steady(30);
 }
 
 void LED_lock_failure_sequence(void)
@@ -147,13 +161,11 @@ void LED_lock_failure_sequence(void)
 	PWM_disable(GREEN_LED);
 	PWM_disable(RED_LED);
 	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
-	LED_blink_red_n(10, 90);
+	LED_blink_red_n(5, 10, 90);
 	// slow red flash at 2Hz
 	if (!PWM_setFrequency(RED_LED, 2, 50)) {
 		PWM_disable(RED_LED);
 	}
-	PWM_disable(RED_LED);
-	PWM_disable(GREEN_LED);
 }
 
 void LED_unlock_success_sequence(void)
@@ -165,7 +177,7 @@ void LED_unlock_success_sequence(void)
 	PWM_disable(GREEN_LED);
 	PWM_disable(RED_LED);
 	// 2 red flashes @ 7Hz then green on steady (lower duty)
-	LED_blink_red_n(7, 90);
+	LED_blink_red_n(2, 7, 90);
 	LED_set_green_steady(30);
 }
 
@@ -178,13 +190,11 @@ void LED_unlock_failure_sequence(void)
 	PWM_disable(GREEN_LED);
 	PWM_disable(RED_LED);
 	// 5 red flashes @ 10Hz, then red flash at 2Hz (continuous)
-	LED_blink_red_n(10, 90);
+	LED_blink_red_n(5, 10, 90);
 	// slow red flash at 2Hz
 	if (!PWM_setFrequency(RED_LED, 2, 50)) {
 		PWM_disable(RED_LED);
 	}
-	PWM_disable(RED_LED);
-	PWM_disable(GREEN_LED);
 }
 
 void LED_hub_command_success(void)
@@ -196,7 +206,7 @@ void LED_hub_command_success(void)
 void LED_hub_command_failure(void)
 {
 	// 5 red flashes @ 10Hz
-	LED_blink_red_n(10, 90);
+	LED_blink_red_n(5, 10, 90);
 }
 
 void LED_status_door_error(void)
