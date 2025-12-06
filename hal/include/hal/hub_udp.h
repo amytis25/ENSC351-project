@@ -1,4 +1,5 @@
 // hub_udp.h
+// UDP listener for door module heartbeats and commands
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>

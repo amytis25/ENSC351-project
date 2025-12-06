@@ -5,11 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-// Application-level Discord alert API (moved from HAL into app).
-// This API provides the same functions previously exposed by the HAL
-// but lives in the application so that webhook credentials and
-// monitor lifecycle are owned by `door_system`.
-
+// Application-level Discord alert API
 typedef char *(*AlertMsgProvider)(void *ctx);
 
 bool discordStart(void);

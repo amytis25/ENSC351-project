@@ -14,7 +14,7 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
-#include <hal/DiscordAlert.h>
+#include "discord_alert.h"
 
 #define HUB_OFFLINE_TIMEOUT_MS 10000  // 10 seconds without heartbeat = offline
 #define HUB_MAX_MODULES 16           // max distinct door modules to track
