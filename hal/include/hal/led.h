@@ -7,8 +7,8 @@
 #include <stdbool.h>
 
 // Default PWM pins used by the board. Change these if your wiring differs.
-#define LED_GREEN_PIN "GPIO15"
-#define LED_RED_PIN   "GPIO12"
+#define LED_GREEN_PIN "GPIO12"
+#define LED_RED_PIN   "GPIO13"
 
 // Initialization: export PWM pins for LEDs. Returns true on success.
 bool LED_init(void);

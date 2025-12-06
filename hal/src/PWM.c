@@ -19,9 +19,9 @@
    avoids multiple-definition linker errors when the header is included
    from multiple compilation units. */
 const LEDt RED_LED = {
-    .duty_cycle = "/dev/hat/pwm/GPIO15/duty_cycle",
-    .period     = "/dev/hat/pwm/GPIO15/period",
-    .enable     = "/dev/hat/pwm/GPIO15/enable"
+    .duty_cycle = "/dev/hat/pwm/GPIO13/duty_cycle",
+    .period     = "/dev/hat/pwm/GPIO13/period",
+    .enable     = "/dev/hat/pwm/GPIO13/enable"
 };
 const LEDt GREEN_LED = {
     .duty_cycle = "/dev/hat/pwm/GPIO12/duty_cycle",
@@ -33,7 +33,7 @@ const LEDt GREEN_LED = {
 bool PWM_export(void){
     // Ensure both GPIO15 and GPIO12 PWM sysfs entries exist. Try exporting any
     // pin whose enable file is not present yet.
-    const char *pins[] = { "GPIO15", "GPIO12" };
+    const char *pins[] = { "GPIO13", "GPIO12" };
     const char *enable_paths[] = { RED_LED.enable, GREEN_LED.enable };
 
     bool all_ok = true;

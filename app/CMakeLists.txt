@@ -13,3 +13,7 @@ target_link_libraries(door_system PRIVATE hal CURL::libcurl)
 # doorMod CLI executable (door module runner)
 add_executable(doorMod_cli src/doorMod_cli.c src/doorMod.c src/door_udp_handler.c)
 target_link_libraries(doorMod_cli PRIVATE hal)
+
+#test
+add_executable(led_test src/led_test.c)
+target_link_libraries(led_test PRIVATE hal)# doorMod CLI executable (door module runner)
